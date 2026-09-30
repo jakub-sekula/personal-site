@@ -10,14 +10,19 @@ import type { LightboxSlide } from '../../lib/lightbox';
 interface Props {
   target: string;
   slides: LightboxSlide[];
+  /**
+   * For photo pages: closing on a different photo than the one it was opened
+   * on goes to that photo's page (instead of back to where it was opened).
+   */
+  closeToPage?: boolean;
 }
 
-const { target, slides } = Astro.props;
+const { target, slides, closeToPage = false } = Astro.props;
 // JSON inside <script>: escape "<" so a description can't close the tag.
 const json = JSON.stringify(slides).replace(/</g, '\\u003c');
 ---
 
-<script type="application/json" data-lightbox={target} set:html={json} />
+<script type="application/json" data-lightbox={target} data-close-to-page={closeToPage ? '' : undefined} set:html={json} />
 
 <script>
   import PhotoSwipeLightbox from 'photoswipe/lightbox';
@@ -25,21 +30,78 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
   import 'photoswipe/style.css';
   import type { LightboxSlide } from '../../lib/lightbox';
 
+  // Photos with a title, description or tags get a panel on the right on wide
+  // screens (the photo is laid out beside it, not under it); on phones, and for
+  // photos without metadata, the text sits at the bottom instead.
+  const SIDEBAR = 352; // px; keep in sync with .lightbox-sidebar in global.css
+  const WIDE = 1024;
+  const hasMeta = (s?: LightboxSlide) => !!(s && (s.title || s.descriptionHtml || s.tags?.length));
+
+  // The sidebar can be collapsed (info button or the "i" key); remembered across visits.
+  const COLLAPSED_KEY = 'lightbox-sidebar-collapsed';
+  let sidebarCollapsed = (() => {
+    try {
+      return localStorage.getItem(COLLAPSED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  })();
+  const INFO_ICON =
+    '<svg aria-hidden="true" class="pswp__icn" viewBox="0 0 24 24" width="32" height="32" style="fill:none;stroke:var(--pswp-icon-color);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;padding:4px"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>';
+
+  /** Reflect the current photo and collapsed state in PhotoSwipe's root classes. */
+  function applySidebarState(pswp: PhotoSwipe, slide?: LightboxSlide) {
+    const meta = hasMeta(slide);
+    pswp.element!.classList.toggle('pswp--has-meta', meta);
+    pswp.element!.classList.toggle('pswp--sidebar', meta && !sidebarCollapsed);
+    pswp.element!.classList.toggle('pswp--sidebar-collapsed', meta && sidebarCollapsed);
+    const button = pswp.element!.querySelector('.lightbox-info-button');
+    button?.setAttribute('aria-pressed', String(!sidebarCollapsed));
+    button?.setAttribute('title', sidebarCollapsed ? 'Show details (i)' : 'Hide details (i)');
+  }
+  const escape = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+  const tagsHtml = (slide: LightboxSlide) =>
+    slide.tags?.length
+      ? `<ul class="flex flex-wrap gap-1.5">${slide.tags
+          .map((t) => `<li><a href="${escape(t.href)}" class="rounded-xs bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20">${escape(t.name)}</a></li>`)
+          .join('')}</ul>`
+      : '';
+  const pageLink = (slide: LightboxSlide, label: string) =>
+    slide.href ? `<a href="${escape(slide.href)}" class="text-xs underline opacity-75 hover:opacity-100">${label}</a>` : '';
+
+  function sidebarHtml(slide: LightboxSlide) {
+    return [
+      slide.title && `<h2 class="font-heading text-2xl font-semibold tracking-tight">${escape(slide.title)}</h2>`,
+      slide.descriptionHtml && `<div class="lightbox-description font-light leading-relaxed opacity-90">${slide.descriptionHtml}</div>`,
+      tagsHtml(slide),
+      pageLink(slide, 'Open photo page →'),
+    ]
+      .filter(Boolean)
+      .join('');
+  }
+
   function captionHtml(slide: LightboxSlide) {
-    const escape = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
     const parts = [
       slide.title && `<p class="font-heading text-lg font-semibold">${escape(slide.title)}</p>`,
       slide.descriptionHtml && `<div class="lightbox-description text-sm font-light opacity-90">${slide.descriptionHtml}</div>`,
-      slide.href && `<a href="${escape(slide.href)}" class="text-xs underline opacity-75 hover:opacity-100">Photo page</a>`,
+      tagsHtml(slide),
+      pageLink(slide, 'Photo page'),
     ].filter(Boolean);
-    return parts.join('');
+    return parts.length ? `<div class="mx-auto flex max-w-3xl flex-col items-center gap-1.5">${parts.join('')}</div>` : '';
   }
 
   function setup(data: HTMLScriptElement) {
     const root = document.getElementById(data.dataset.lightbox!);
     if (!root) return;
     const slides: LightboxSlide[] = JSON.parse(data.textContent!);
-    const tiles = () => root.querySelectorAll<HTMLElement>('[data-slide]');
+    const closeToPage = data.dataset.closeToPage !== undefined;
+    // The element for a slide (a gallery tile, or the big photo on a photo page).
+    // On photo pages the root itself is the slide element, so check it too.
+    const tileFor = (index: number) => {
+      const selector = `[data-slide="${index}"]`;
+      return root.matches(selector) ? root : root.querySelector<HTMLElement>(selector);
+    };
 
     const lightbox = new PhotoSwipeLightbox({
       dataSource: slides.map(({ src, srcset, width, height, msrc, alt, thumbCropped }) => ({ src, srcset, width, height, msrc, alt, thumbCropped })),
@@ -49,30 +111,83 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
       // PhotoSwipe would refocus the tile that was clicked, scrolling back to it;
       // we focus the tile of the photo being closed instead (see 'destroy').
       returnFocus: false,
+      // Make room for the sidebar, per photo.
+      paddingFn: (viewport, _item, index) => ({
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: viewport.x >= WIDE && hasMeta(slides[index]) && !sidebarCollapsed ? SIDEBAR : 0,
+      }),
     });
 
     // Zoom in from (and back out to) the thumbnail that was clicked. Album tiles
     // have a blurred copy behind portrait photos, so use the last <img>.
     lightbox.addFilter('thumbEl', (thumbEl, _data, index) => {
-      const imgs = tiles()[index]?.querySelectorAll('img');
+      const imgs = tileFor(index)?.querySelectorAll('img');
       // Without a thumbnail PhotoSwipe falls back to a fade.
       return (imgs?.length ? imgs[imgs.length - 1] : thumbEl) as HTMLElement;
     });
 
-    // Caption: title, description and a link to the photo's page.
+    // Sidebar (wide screens) and bottom caption (phones, or photos without metadata).
     lightbox.on('uiRegister', () => {
-      lightbox.pswp!.ui!.registerElement({
-        name: 'caption',
+      const ui = lightbox.pswp!.ui!;
+      ui.registerElement({
+        name: 'sidebar',
         order: 9,
+        isButton: false,
+        appendTo: 'root',
+        onInit: (el: HTMLElement, pswp: PhotoSwipe) => {
+          el.className =
+            'lightbox-sidebar pswp__hide-on-close absolute inset-y-0 right-0 flex-col gap-5 overflow-y-auto border-l border-white/10 bg-darkbg px-7 pt-20 pb-8 text-white';
+          const render = () => {
+            const slide = slides[pswp.currIndex];
+            applySidebarState(pswp, slide);
+            el.innerHTML = slide && hasMeta(slide) ? sidebarHtml(slide) : '';
+          };
+          pswp.on('change', render);
+          render();
+        },
+      });
+      // Info button in the top bar (between zoom and close) collapses/expands the sidebar.
+      const toggleSidebar = (pswp: PhotoSwipe) => {
+        sidebarCollapsed = !sidebarCollapsed;
+        try {
+          localStorage.setItem(COLLAPSED_KEY, sidebarCollapsed ? '1' : '0');
+        } catch {}
+        applySidebarState(pswp, slides[pswp.currIndex]);
+        pswp.updateSize(true); // re-run paddingFn so the photo takes (or gives back) the space
+      };
+      ui.registerElement({
+        name: 'info',
+        order: 15,
+        isButton: true,
+        appendTo: 'bar',
+        html: INFO_ICON,
+        onInit: (el: HTMLElement, pswp: PhotoSwipe) => {
+          el.classList.add('lightbox-info-button');
+          applySidebarState(pswp, slides[pswp.currIndex]);
+          pswp.on('keydown', (e) => {
+            const key = (e.originalEvent as KeyboardEvent).key;
+            if ((key === 'i' || key === 'I') && hasMeta(slides[pswp.currIndex]) && window.innerWidth >= WIDE) {
+              e.preventDefault();
+              toggleSidebar(pswp);
+            }
+          });
+        },
+        onClick: (_e: MouseEvent, _el: HTMLElement, pswp: PhotoSwipe) => toggleSidebar(pswp),
+      });
+      ui.registerElement({
+        name: 'caption',
+        order: 10,
         isButton: false,
         appendTo: 'root',
         onInit: (el: HTMLElement, pswp: PhotoSwipe) => {
           el.className =
             'lightbox-caption pswp__hide-on-close pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-6 pt-16 pb-6 text-center text-white [&_a]:pointer-events-auto';
           const render = () => {
-            const html = captionHtml(slides[pswp.currIndex] ?? ({} as LightboxSlide));
-            el.innerHTML = html ? `<div class="mx-auto flex max-w-3xl flex-col items-center gap-1.5">${html}</div>` : '';
-            el.hidden = !html;
+            const slide = slides[pswp.currIndex];
+            el.innerHTML = slide ? captionHtml(slide) : '';
+            el.hidden = !el.innerHTML;
           };
           pswp.on('change', render);
           render();
@@ -83,6 +198,7 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
     // Keep the address bar and tab title on the photo being shown.
     let pushedHistory = false;
     let pageTitle = '';
+    let openedAt = -1;
     const showInUrl = (index: number) => {
       const slide = slides[index];
       if (!slide?.href) return;
@@ -92,7 +208,7 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
     // Scroll the page behind the lightbox so the current photo's tile is on screen:
     // closing then lands on it, and the zoom-out animation goes back into it.
     const keepTileInView = (index: number) => {
-      const tile = tiles()[index];
+      const tile = tileFor(index);
       if (!tile) return;
       const { top, bottom } = tile.getBoundingClientRect();
       const header = 64; // the fixed site header
@@ -104,11 +220,22 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
       keepTileInView(lightbox.pswp!.currIndex);
     });
     // Keyboard focus continues from the photo you were on, without scrolling.
-    lightbox.on('destroy', () => tiles()[lightbox.pswp?.currIndex ?? -1]?.focus({ preventScroll: true }));
+    // No focus ring for this (it isn't the user moving focus); Tab still shows rings as usual.
+    lightbox.on('destroy', () => {
+      const tile = tileFor(lightbox.pswp?.currIndex ?? -1);
+      if (!tile) return;
+      tile.dataset.lightboxFocus = '';
+      tile.addEventListener('blur', () => delete tile.dataset.lightboxFocus, { once: true });
+      tile.focus({ preventScroll: true });
+    });
     lightbox.on('close', () => {
       document.title = pageTitle;
-      if (pushedHistory) {
-        pushedHistory = false;
+      if (!pushedHistory) return;
+      pushedHistory = false;
+      const current = slides[lightbox.pswp!.currIndex];
+      if (closeToPage && lightbox.pswp!.currIndex !== openedAt && current?.href) {
+        location.replace(current.href); // land on the page of the photo you ended on
+      } else {
         history.back(); // back to the page the lightbox was opened from
       }
     });
@@ -125,6 +252,7 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
 
     const open = (index: number) => {
       pageTitle = document.title;
+      openedAt = index;
       if (slides[index]?.href) {
         history.scrollRestoration = 'manual';
         history.pushState({ lightbox: true }, '', slides[index].href);
@@ -137,6 +265,9 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
     root.addEventListener('click', (e) => {
       const el = (e.target as HTMLElement).closest<HTMLElement>('[data-slide]');
       if (!el || !root.contains(el)) return;
+      // Links inside a clickable photo (e.g. prev/next on photo pages) stay links.
+      const link = (e.target as HTMLElement).closest('a');
+      if (link && link !== el && el.contains(link)) return;
       // Let modified clicks open the photo page (new tab, etc.).
       if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       e.preventDefault();

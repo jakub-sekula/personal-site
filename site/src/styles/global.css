@@ -217,6 +217,42 @@ picture > source {
   display: none;
 }
 
+/* Lightbox sidebar (see Lightbox.astro): only on wide screens, for photos with metadata
+   (PhotoSwipe gets the .pswp--sidebar class). Width matches SIDEBAR there. */
+.lightbox-sidebar {
+  display: none;
+  width: 22rem;
+}
+/* The info button (collapse/expand) only makes sense where the sidebar can appear. */
+.pswp .lightbox-info-button {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .pswp--has-meta .lightbox-info-button {
+    display: flex;
+  }
+  .pswp--sidebar .lightbox-sidebar {
+    display: flex;
+  }
+  /* With the sidebar shown or collapsed, the bottom caption isn't used. */
+  .pswp--sidebar .lightbox-caption,
+  .pswp--sidebar-collapsed .lightbox-caption {
+    display: none;
+  }
+  .pswp--sidebar .pswp__button--arrow--next {
+    right: 22rem;
+  }
+}
+/* The sidebar sits above the photo but below the counter/zoom/close buttons (PhotoSwipe
+   gives both its top bar and .pswp__hide-on-close elements z-index 10). */
+.pswp .lightbox-sidebar.pswp__hide-on-close {
+  z-index: 5;
+}
+/* Focus returned to a photo when the lightbox closes: no ring (see Lightbox.astro). */
+[data-lightbox-focus] {
+  outline: none;
+}
+
 /* Photo descriptions (Markdown) in the lightbox caption (see Lightbox.astro). */
 .lightbox-description a {
   text-decoration: underline;

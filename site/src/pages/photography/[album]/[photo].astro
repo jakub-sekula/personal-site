@@ -7,7 +7,9 @@ import Photography from '../../../layouts/Photography.astro';
 import Icon from '../../../components/Icon.astro';
 import Tag from '../../../components/common/Tag.astro';
 import Picture from '../../../components/photos/Picture.astro';
+import Lightbox from '../../../components/photos/Lightbox.astro';
 import { albumName, albumPhotos, getAlbums, photoPageTitle, plainText, tagSlug } from '../../../lib/content';
+import { toSlides } from '../../../lib/lightbox';
 
 export const getStaticPaths = (async () => {
   const albums = await getAlbums();
@@ -15,17 +17,19 @@ export const getStaticPaths = (async () => {
     const photos = albumPhotos(album);
     return photos.map((item) => ({
       params: { album: album.id, photo: item.slug },
-      props: { item, prev: photos[item.index - 1], next: photos[item.index + 1], total: photos.length },
+      props: { item, photos, prev: photos[item.index - 1], next: photos[item.index + 1], total: photos.length },
     }));
   });
 }) satisfies GetStaticPaths;
 
-const { item, prev, next, total } = Astro.props;
+const { item, photos, prev, next, total } = Astro.props;
 const { album, photo, title, descriptionHtml, description, tags, alt, index } = item;
 const albumHref = `/photography/${album.id}`;
 const metaDescription = description
   ? plainText(description)
   : album.body?.trim() || `Photo ${index + 1} of ${total} from ${albumName(album)}.`;
+// Clicking the photo opens the whole album in the lightbox, starting here.
+const slides = toSlides(photos.map((p) => ({ ...p, pageTitle: photoPageTitle(p) })));
 ---
 
 <Photography
@@ -44,7 +48,14 @@ const metaDescription = description
       <span class="tabular-nums opacity-75">{index + 1} / {total}</span>
     </nav>
 
-    <figure class="group relative flex items-center justify-center overflow-hidden rounded-xs bg-black/5 dark:bg-black/30">
+    <figure
+      id="photo-viewer"
+      data-slide={index}
+      role="button"
+      tabindex="0"
+      aria-label="Open in the lightbox"
+      class="group relative flex cursor-zoom-in items-center justify-center overflow-hidden rounded-xs bg-black/5 dark:bg-black/30"
+    >
       <Picture
         src={photo.src}
         alt={alt}
@@ -77,6 +88,7 @@ const metaDescription = description
         )
       }
     </figure>
+    <Lightbox target="photo-viewer" slides={slides} closeToPage />
 
     <div class="mx-auto flex w-full max-w-[75ch] flex-col gap-4">
       {
@@ -124,6 +136,7 @@ const metaDescription = description
   // Arrow keys move through the album, like the lightbox.
   document.addEventListener('keydown', (e) => {
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (document.querySelector('.pswp--open')) return; // the lightbox handles its own arrows
     if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable]')) return;
     const rel = { ArrowLeft: 'prev', ArrowRight: 'next' }[e.key];
     const link = rel && document.querySelector<HTMLAnchorElement>(`a[rel="${rel}"]`);

@@ -1,4 +1,5 @@
 import type { Photo } from './photos';
+import { tagSlug } from './content';
 
 /** What the lightbox needs per photo (plain data, embedded in the page as JSON). */
 export interface LightboxSlide {
@@ -15,6 +16,8 @@ export interface LightboxSlide {
   title?: string;
   /** Rendered Markdown. */
   descriptionHtml?: string;
+  /** Photo tags, linking to their tag pages. */
+  tags?: { name: string; href: string }[];
   /** The photo's own page; the address bar shows it while the photo is open. */
   href?: string;
   /** Tab title while the photo is open. */
@@ -26,13 +29,14 @@ export function toSlides(
     photo: Photo;
     title?: string;
     descriptionHtml?: string;
+    tags?: string[];
     href?: string;
     alt?: string;
     pageTitle?: string;
     thumbCropped?: boolean;
   }[],
 ): LightboxSlide[] {
-  return items.map(({ photo, title, descriptionHtml, href, alt, pageTitle, thumbCropped }) => ({
+  return items.map(({ photo, title, descriptionHtml, tags, href, alt, pageTitle, thumbCropped }) => ({
     src: photo.largest,
     srcset: photo.srcset('webp'),
     width: photo.w,
@@ -42,6 +46,7 @@ export function toSlides(
     ...(alt && { alt }),
     ...(title && { title }),
     ...(descriptionHtml && { descriptionHtml }),
+    ...(tags?.length && { tags: tags.map((name) => ({ name, href: `/photography/tags/${tagSlug(name)}` })) }),
     ...(href && { href }),
     ...(pageTitle && { pageTitle }),
   }));

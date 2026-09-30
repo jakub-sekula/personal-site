@@ -48,6 +48,7 @@ const items = await Promise.all(
       href: listed?.href,
       title: listed?.title,
       descriptionHtml: ref.caption ? inline(ref.caption) : listed?.descriptionHtml,
+      tags: listed?.tags,
       alt: ref.alt ?? listed?.alt ?? ref.caption?.replace(/[*_`[\]]|\(.*?\)/g, '') ?? 'Photo',
       pageTitle: listed && photoPageTitle(listed),
       // Rendered width ≈ ratio × row height; generous so 2x screens stay sharp.
