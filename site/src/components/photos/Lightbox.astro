@@ -28,85 +28,43 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
   import PhotoSwipeLightbox from 'photoswipe/lightbox';
   import type PhotoSwipe from 'photoswipe';
   import 'photoswipe/style.css';
-  import { ArrowRight, Check, ChevronLeft, Info, Link as LinkIcon, X, ZoomIn, ZoomOut } from 'lucide-static';
+  import { Check, ChevronLeft, GalleryThumbnails, Link as LinkIcon, X, ZoomIn, ZoomOut } from 'lucide-static';
   import type { LightboxSlide } from '../../lib/lightbox';
 
-  // On wide screens every photo with a page (or metadata) gets a panel on the
-  // right, and the photo is laid out beside it, not under it. On phones the
-  // same text and links sit at the bottom instead.
-  const SIDEBAR = 352; // px; keep in sync with .lightbox-sidebar in global.css
-  const WIDE = 1024;
-  const hasSidebar = (s?: LightboxSlide) => !!(s && (s.href || s.title || s.descriptionHtml || s.tags?.length));
-
-  // The sidebar can be collapsed (info button or the "i" key); remembered across visits.
-  const COLLAPSED_KEY = 'lightbox-sidebar-collapsed';
-  let sidebarCollapsed = (() => {
+  // The thumbnail strip along the bottom can be hidden (its button or "t");
+  // remembered across visits.
+  const THUMBS = 76; // px; keep in sync with .lightbox-thumbs in global.css
+  const THUMBS_KEY = 'lightbox-thumbs-hidden';
+  let thumbsHidden = (() => {
     try {
-      return localStorage.getItem(COLLAPSED_KEY) === '1';
+      return localStorage.getItem(THUMBS_KEY) === '1';
     } catch {
       return false;
     }
   })();
+
   // Lucide icons for PhotoSwipe's buttons (styled in global.css, .pswp__icn.lucide).
   const icon = (svg: string) => svg.trim().replace('class="lucide', 'class="pswp__icn lucide');
-  const INFO_ICON = icon(Info);
+  const LINK_ICON = icon(LinkIcon);
+  const COPIED_ICON = icon(Check);
 
-  /** Reflect the current photo and collapsed state in PhotoSwipe's root classes. */
-  function applySidebarState(pswp: PhotoSwipe, slide?: LightboxSlide) {
-    const has = hasSidebar(slide);
-    pswp.element!.classList.toggle('pswp--has-sidebar', has);
-    pswp.element!.classList.toggle('pswp--sidebar', has && !sidebarCollapsed);
-    pswp.element!.classList.toggle('pswp--sidebar-collapsed', has && sidebarCollapsed);
-    const button = pswp.element!.querySelector('.lightbox-info-button');
-    button?.setAttribute('aria-pressed', String(!sidebarCollapsed));
-    button?.setAttribute('title', sidebarCollapsed ? 'Show details (i)' : 'Hide details (i)');
+  /** Reflect the current photo and the strip's state in PhotoSwipe's root classes and buttons. */
+  function applyState(pswp: PhotoSwipe, slide: LightboxSlide | undefined, thumbs: boolean) {
+    const root = pswp.element!;
+    root.classList.toggle('pswp--has-link', !!slide?.href);
+    root.classList.toggle('pswp--thumbs', thumbs && !thumbsHidden);
+    const button = root.querySelector('.lightbox-thumbs-button');
+    button?.setAttribute('aria-pressed', String(!thumbsHidden));
+    button?.setAttribute('title', thumbsHidden ? 'Show thumbnails (t)' : 'Hide thumbnails (t)');
   }
   const escape = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
-
-  const tagsHtml = (slide: LightboxSlide) =>
-    slide.tags?.length
-      ? `<ul class="flex flex-wrap gap-1.5">${slide.tags
-          .map((t) => `<li><a href="${escape(t.href)}" class="rounded-xs bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20">${escape(t.name)}</a></li>`)
-          .join('')}</ul>`
-      : '';
-  // Small inline Lucide icon for text buttons.
-  const smallIcon = (svg: string) =>
-    svg.trim().replace('width="24"', 'width="14"').replace('height="24"', 'height="14"').replace('class="lucide', 'class="shrink-0 lucide');
-  const buttonClass =
-    'inline-flex items-center gap-1.5 rounded-xs border border-white/20 px-2.5 py-1 text-xs hover:border-white/50 hover:bg-white/5';
-  const copyLabel = `${smallIcon(LinkIcon)}<span>Copy link</span>`;
-  const copiedLabel = `${smallIcon(Check)}<span>Copied</span>`;
-
-  // "Open photo page" and "Copy link" (the photo page's full address).
-  const actionsHtml = (slide: LightboxSlide, align = '') =>
-    slide.href
-      ? `<div class="flex flex-wrap items-center gap-2 ${align}">` +
-        `<a href="${escape(slide.href)}" class="${buttonClass}">${smallIcon(ArrowRight)}<span>Open photo page</span></a>` +
-        `<button type="button" data-copy-link="${escape(slide.href)}" class="${buttonClass}">${copyLabel}</button>` +
-        `</div>`
-      : '';
-
-  function sidebarHtml(slide: LightboxSlide) {
-    return [
-      slide.album &&
-        `<a href="${escape(slide.album.href)}" class="text-xs font-light uppercase tracking-wide opacity-60 hover:opacity-100">${escape(slide.album.title)}</a>`,
-      slide.title && `<h2 class="-mt-2 font-heading text-2xl font-semibold tracking-tight">${escape(slide.title)}</h2>`,
-      slide.descriptionHtml && `<div class="lightbox-description font-light leading-relaxed opacity-90">${slide.descriptionHtml}</div>`,
-      tagsHtml(slide),
-      actionsHtml(slide),
-    ]
-      .filter(Boolean)
-      .join('');
-  }
 
   function captionHtml(slide: LightboxSlide) {
     const parts = [
       slide.title && `<p class="font-heading text-lg font-semibold">${escape(slide.title)}</p>`,
       slide.descriptionHtml && `<div class="lightbox-description text-sm font-light opacity-90">${slide.descriptionHtml}</div>`,
-      tagsHtml(slide),
-      actionsHtml(slide, 'justify-center'),
     ].filter(Boolean);
-    return parts.length ? `<div class="mx-auto flex max-w-3xl flex-col items-center gap-1.5">${parts.join('')}</div>` : '';
+    return parts.length ? `<div class="flex max-w-3xl flex-col gap-1.5">${parts.join('')}</div>` : '';
   }
 
   async function copyText(text: string) {
@@ -127,6 +85,7 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
     if (!root) return;
     const slides: LightboxSlide[] = JSON.parse(data.textContent!);
     const closeToPage = data.dataset.closeToPage !== undefined;
+    const hasThumbs = slides.length > 1;
     // The element for a slide (a gallery tile, or the big photo on a photo page).
     // On photo pages the root itself is the slide element, so check it too.
     const tileFor = (index: number) => {
@@ -146,13 +105,8 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
       // PhotoSwipe would refocus the tile that was clicked, scrolling back to it;
       // we focus the tile of the photo being closed instead (see 'destroy').
       returnFocus: false,
-      // Make room for the sidebar, per photo.
-      paddingFn: (viewport, _item, index) => ({
-        top: 0,
-        bottom: 0,
-        left: 0,
-        right: viewport.x >= WIDE && hasSidebar(slides[index]) && !sidebarCollapsed ? SIDEBAR : 0,
-      }),
+      // Make room for the thumbnail strip.
+      paddingFn: () => ({ top: 0, bottom: hasThumbs && !thumbsHidden ? THUMBS : 0, left: 0, right: 0 }),
     });
 
     // Zoom in from (and back out to) the thumbnail that was clicked. Album tiles
@@ -163,66 +117,10 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
       return (imgs?.length ? imgs[imgs.length - 1] : thumbEl) as HTMLElement;
     });
 
-    // "Copy link" buttons (sidebar and bottom caption are re-rendered per photo, so delegate).
-    const onCopyClick = async (e: MouseEvent) => {
-      const button = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-copy-link]');
-      if (!button) return;
-      e.preventDefault();
-      e.stopPropagation();
-      await copyText(new URL(button.dataset.copyLink!, location.origin).href);
-      button.innerHTML = copiedLabel;
-      setTimeout(() => (button.innerHTML = copyLabel), 1500);
-    };
-
-    // Sidebar (wide screens) and bottom caption (phones, or photos without a page).
+    // Caption over the bottom of the photo, thumbnail strip, and top-bar buttons
+    // for copying the link and showing/hiding the strip.
     lightbox.on('uiRegister', () => {
       const ui = lightbox.pswp!.ui!;
-      ui.registerElement({
-        name: 'sidebar',
-        order: 9,
-        isButton: false,
-        appendTo: 'root',
-        onInit: (el: HTMLElement, pswp: PhotoSwipe) => {
-          el.className =
-            'lightbox-sidebar pswp__hide-on-close absolute inset-y-0 right-0 flex-col gap-5 overflow-y-auto border-l border-white/10 bg-darkbg px-7 pt-20 pb-8 text-white';
-          el.addEventListener('click', onCopyClick);
-          const render = () => {
-            const slide = slides[pswp.currIndex];
-            applySidebarState(pswp, slide);
-            el.innerHTML = slide && hasSidebar(slide) ? sidebarHtml(slide) : '';
-          };
-          pswp.on('change', render);
-          render();
-        },
-      });
-      // Info button in the top bar (between zoom and close) collapses/expands the sidebar.
-      const toggleSidebar = (pswp: PhotoSwipe) => {
-        sidebarCollapsed = !sidebarCollapsed;
-        try {
-          localStorage.setItem(COLLAPSED_KEY, sidebarCollapsed ? '1' : '0');
-        } catch {}
-        applySidebarState(pswp, slides[pswp.currIndex]);
-        pswp.updateSize(true); // re-run paddingFn so the photo takes (or gives back) the space
-      };
-      ui.registerElement({
-        name: 'info',
-        order: 15,
-        isButton: true,
-        appendTo: 'bar',
-        html: INFO_ICON,
-        onInit: (el: HTMLElement, pswp: PhotoSwipe) => {
-          el.classList.add('lightbox-info-button');
-          applySidebarState(pswp, slides[pswp.currIndex]);
-          pswp.on('keydown', (e) => {
-            const key = (e.originalEvent as KeyboardEvent).key;
-            if ((key === 'i' || key === 'I') && hasSidebar(slides[pswp.currIndex]) && window.innerWidth >= WIDE) {
-              e.preventDefault();
-              toggleSidebar(pswp);
-            }
-          });
-        },
-        onClick: (_e: MouseEvent, _el: HTMLElement, pswp: PhotoSwipe) => toggleSidebar(pswp),
-      });
       ui.registerElement({
         name: 'caption',
         order: 10,
@@ -230,10 +128,10 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
         appendTo: 'root',
         onInit: (el: HTMLElement, pswp: PhotoSwipe) => {
           el.className =
-            'lightbox-caption pswp__hide-on-close pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-6 pt-16 pb-6 text-center text-white [&_a]:pointer-events-auto [&_button]:pointer-events-auto';
-          el.addEventListener('click', onCopyClick);
+            'lightbox-caption pswp__hide-on-close pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-5 pt-16 pb-6 text-white [&_a]:pointer-events-auto';
           const render = () => {
             const slide = slides[pswp.currIndex];
+            applyState(pswp, slide, hasThumbs);
             el.innerHTML = slide ? captionHtml(slide) : '';
             el.hidden = !el.innerHTML;
           };
@@ -241,7 +139,111 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
           render();
         },
       });
+
+      // Copy the photo page's full address (the photos that have one).
+      ui.registerElement({
+        name: 'copy-link',
+        order: 13,
+        isButton: true,
+        appendTo: 'bar',
+        title: 'Copy link',
+        html: LINK_ICON,
+        onInit: (el: HTMLElement) => el.classList.add('lightbox-copy-button'),
+        onClick: async (_e: MouseEvent, el: HTMLElement, pswp: PhotoSwipe) => {
+          const href = slides[pswp.currIndex]?.href;
+          if (!href) return;
+          await copyText(new URL(href, location.origin).href);
+          el.innerHTML = COPIED_ICON;
+          el.title = 'Link copied';
+          clearTimeout(Number(el.dataset.timer));
+          el.dataset.timer = String(
+            setTimeout(() => {
+              el.innerHTML = LINK_ICON;
+              el.title = 'Copy link';
+            }, 1500),
+          );
+        },
+      });
+
+      if (hasThumbs) {
+        // Show/hide the strip (button or "t"); the photo takes (or gives back) its space.
+        const toggleThumbs = (pswp: PhotoSwipe) => {
+          thumbsHidden = !thumbsHidden;
+          try {
+            localStorage.setItem(THUMBS_KEY, thumbsHidden ? '1' : '0');
+          } catch {}
+          applyState(pswp, slides[pswp.currIndex], hasThumbs);
+          pswp.updateSize(true); // re-run paddingFn
+        };
+        ui.registerElement({
+          name: 'thumbs',
+          order: 14,
+          isButton: true,
+          appendTo: 'bar',
+          html: icon(GalleryThumbnails),
+          onInit: (el: HTMLElement, pswp: PhotoSwipe) => {
+            el.classList.add('lightbox-thumbs-button');
+            applyState(pswp, slides[pswp.currIndex], hasThumbs);
+            pswp.on('keydown', (e) => {
+              const key = (e.originalEvent as KeyboardEvent).key;
+              if (key === 't' || key === 'T') {
+                e.preventDefault();
+                toggleThumbs(pswp);
+              }
+            });
+          },
+          onClick: (_e: MouseEvent, _el: HTMLElement, pswp: PhotoSwipe) => toggleThumbs(pswp),
+        });
+        ui.registerElement({
+          name: 'thumb-strip',
+          order: 11,
+          isButton: false,
+          appendTo: 'root',
+          onInit: (el: HTMLElement, pswp: PhotoSwipe) => setupThumbs(el, pswp),
+        });
+      }
     });
+
+    // Thumbnail strip along the bottom: every photo in the gallery, the current
+    // one highlighted and kept in view; click one to jump to it.
+    function setupThumbs(el: HTMLElement, pswp: PhotoSwipe) {
+      el.className = 'lightbox-thumbs pswp__hide-on-close absolute inset-x-0 bottom-0 flex items-center gap-3 overflow-x-auto px-5';
+      el.innerHTML = slides
+        .map(
+          (s, i) =>
+            `<button type="button" data-thumb="${i}" aria-label="${escape(s.title || s.alt || `Photo ${i + 1}`)}">` +
+            `<img src="${escape(s.msrc)}" alt="" loading="lazy" decoding="async" draggable="false"></button>`,
+        )
+        .join('');
+      const buttons = [...el.querySelectorAll<HTMLButtonElement>('[data-thumb]')];
+      el.addEventListener('click', (e) => {
+        const button = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-thumb]');
+        if (button) pswp.goTo(Number(button.dataset.thumb));
+      });
+      // A mouse wheel scrolls the strip sideways.
+      el.addEventListener(
+        'wheel',
+        (e) => {
+          if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+          e.preventDefault();
+          el.scrollLeft += e.deltaY;
+        },
+        { passive: false },
+      );
+      let first = true;
+      const update = () => {
+        buttons.forEach((b, i) => b.toggleAttribute('aria-current', i === pswp.currIndex));
+        const current = buttons[pswp.currIndex];
+        if (!current) return;
+        const left = current.offsetLeft - (el.clientWidth - current.offsetWidth) / 2;
+        el.scrollTo({ left, behavior: first ? 'instant' : 'smooth' });
+        first = false;
+      };
+      pswp.on('change', update);
+      // Layout isn't ready until the lightbox is shown (and after the strip is toggled back on).
+      pswp.on('openingAnimationStart', update);
+      pswp.on('resize', update);
+    }
 
     // Keep the address bar and tab title on the photo being shown.
     let pushedHistory = false;

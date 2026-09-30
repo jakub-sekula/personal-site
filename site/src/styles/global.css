@@ -217,36 +217,46 @@ picture > source {
   display: none;
 }
 
-/* Lightbox sidebar (see Lightbox.astro): only on wide screens, for photos with metadata
-   (PhotoSwipe gets the .pswp--sidebar class). Width matches SIDEBAR there. */
-.lightbox-sidebar {
-  display: none;
-  width: 22rem;
-}
-/* The info button (collapse/expand) only makes sense where the sidebar can appear. */
-.pswp .lightbox-info-button {
+/* Copy link: only for photos with a page (see Lightbox.astro). */
+.pswp:not(.pswp--has-link) .lightbox-copy-button {
   display: none;
 }
-@media (min-width: 1024px) {
-  .pswp--has-sidebar .lightbox-info-button {
-    display: flex;
-  }
-  .pswp--sidebar .lightbox-sidebar {
-    display: flex;
-  }
-  /* With the sidebar shown or collapsed, the bottom caption isn't used. */
-  .pswp--sidebar .lightbox-caption,
-  .pswp--sidebar-collapsed .lightbox-caption {
-    display: none;
-  }
-  .pswp--sidebar .pswp__button--arrow--next {
-    right: 22rem;
-  }
+
+/* Thumbnail strip along the bottom of the lightbox (toggled with .pswp--thumbs).
+   Height matches THUMBS in Lightbox.astro. */
+.lightbox-thumbs {
+  display: none;
+  height: 76px;
+  scrollbar-width: none;
 }
-/* The sidebar sits above the photo but below the counter/zoom/close buttons (PhotoSwipe
-   gives both its top bar and .pswp__hide-on-close elements z-index 10). */
-.pswp .lightbox-sidebar.pswp__hide-on-close {
-  z-index: 5;
+.pswp--thumbs .lightbox-thumbs {
+  display: flex;
+}
+.pswp--thumbs .lightbox-caption {
+  bottom: 76px;
+}
+.lightbox-thumbs button {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border-radius: 2px;
+  opacity: 0.45;
+  outline-offset: 2px;
+  transition: opacity 150ms;
+}
+.lightbox-thumbs button:hover,
+.lightbox-thumbs button:focus-visible {
+  opacity: 0.85;
+}
+.lightbox-thumbs button[aria-current] {
+  opacity: 1;
+  outline: 2px solid white;
+}
+.lightbox-thumbs img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 /* Lightbox buttons use Lucide icons (see Lightbox.astro): stroked rather than PhotoSwipe's
    filled icons, with a soft shadow so they stay visible over light photos. */
