@@ -51,7 +51,7 @@ const id = `gallery-${Math.random().toString(36).slice(2, 10)}`;
         role="button"
         tabindex="0"
         aria-label={`Open photo ${i + 1}`}
-        class="group relative block cursor-pointer overflow-hidden rounded-sm"
+        class="group relative block cursor-pointer overflow-hidden rounded-xs"
         style={`flex: ${item.ratio} 1 ${item.ratio * rowHeight}rem; aspect-ratio: ${item.ratio}`}
       >
         <Picture src={item.src} alt={item.alt} sizes={item.sizes} class="size-full object-cover transition duration-500 group-hover:scale-[1.03]" />

@@ -1,6 +1,72 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+/* Dark mode follows the `dark` class on <html> (set before first paint in Base.astro). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* The site's design tokens (carried over from the old tailwind.config.js). */
+@theme {
+  --font-sans: 'Albert Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-mono: 'Source Code Pro', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-heading: Inter, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+  /* Larger sizes set only the font size; line height is inherited (as it was in v3). */
+  --text-xl: 1.375rem;
+  --text-xl--line-height: initial;
+  --text-2xl: 1.5625rem;
+  --text-2xl--line-height: initial;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: initial;
+  --text-4xl: 2.5rem;
+  --text-4xl--line-height: initial;
+  --text-5xl: 3.125rem;
+  --text-5xl--line-height: initial;
+  --text-6xl: 3.75rem;
+  --text-6xl--line-height: initial;
+  --text-7xl: 4.375rem;
+  --text-7xl--line-height: initial;
+
+  --color-js-red: #f1647b;
+  --color-js-green: #44eaa0;
+  --color-js-blue: #59b8df;
+  --color-js-yellow: #fed557;
+  --color-darkbg: hsl(190, 14%, 6%);
+  --color-lightbg: hsl(36, 30%, 99%);
+  --color-text: #2b2a2a;
+  --color-darktext: hsl(195, 32%, 90%);
+
+  --container-page: 1350px;
+}
+
+/* Typography's dark ("invert") text uses the site's text colour. Unlayered, so it wins over the plugin. */
+.prose {
+  --tw-prose-invert-body: var(--color-darktext);
+  --tw-prose-invert-headings: var(--color-darktext);
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  /* v3's base styles gave buttons a pointer cursor; v4 dropped it. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
 
 html {
   scroll-behavior: smooth;

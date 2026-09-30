@@ -9,7 +9,7 @@ import { getPosts, tagSlug } from '../../lib/content';
 
 const [latest, ...older] = await getPosts();
 const date = (d: Date) => d.toLocaleDateString('en-gb');
-const tagClass = 'rounded-sm bg-darkbg px-2 py-0.5 text-xs text-darktext dark:bg-darktext dark:text-text';
+const tagClass = 'rounded-xs bg-darkbg px-2 py-0.5 text-xs text-darktext dark:bg-darktext dark:text-text';
 ---
 
 <Page title="Blog - Jakub Sekula" description="A place for my thoughts, projects and random ramblings. Do not take too seriously.">
@@ -25,7 +25,7 @@ const tagClass = 'rounded-sm bg-darkbg px-2 py-0.5 text-xs text-darktext dark:bg
             )}
             <div
               class="flex flex-col gap-2 border-text/10 bg-white
-              py-4 shadow-text/5 dark:border-darktext/5 dark:bg-darkbg dark:shadow-darktext/[1%]
+              py-4 shadow-text/5 dark:border-darktext/5 dark:bg-darkbg dark:shadow-darktext/1
               md:-mt-24 md:mb-8 md:w-11/12 md:rounded-md
               md:border md:p-6 md:shadow-md"
             >

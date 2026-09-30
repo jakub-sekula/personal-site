@@ -12,7 +12,7 @@ const { headline, avatar, background, socials } = Astro.props.home;
 
 <section
   id="hero-section"
-  class="relative -mt-16 mb-16 grid w-full grid-cols-12 gap-4 overflow-hidden bg-gradient-to-tl from-slate-950 to-slate-800 px-10 py-24 pt-40 md:px-8 xl:min-h-[70vh]"
+  class="relative -mt-16 mb-16 grid w-full grid-cols-12 gap-4 overflow-hidden bg-linear-to-tl from-slate-950 to-slate-800 px-10 py-24 pt-40 md:px-8 xl:min-h-[70vh]"
 >
   <div class="patterned absolute inset-0"></div>
   <Image
@@ -33,7 +33,7 @@ const { headline, avatar, background, socials } = Astro.props.home;
       widths={[384, 576]}
       sizes="(min-width: 768px) 288px, 192px"
       loading="eager"
-      class="mb-8 h-48 w-48 shrink-0 rounded-full bg-gradient-to-tr from-amber-200 to-amber-600 shadow-xl shadow-slate-950 md:mb-0 md:h-72 md:w-72"
+      class="mb-8 h-48 w-48 shrink-0 rounded-full bg-linear-to-tr from-amber-200 to-amber-600 shadow-xl shadow-slate-950 md:mb-0 md:h-72 md:w-72"
     />
     <div class="flex max-w-2xl flex-col text-white md:block">
       <h1 class="font-heading text-3xl font-semibold tracking-tight md:text-4xl lg:text-6xl">{headline}</h1>

@@ -20,7 +20,7 @@ const filters = ['All projects', ...new Set(projects.map(({ project }) => projec
         filters.map((filter, i) => (
           <button
             data-filter={filter}
-            class:list={['rounded-card w-36  px-4 py-2 text-sm transition-all  ease-out hover:-translate-y-px', i === 0 && 'outline outline-js-yellow']}
+            class:list={['rounded-card w-36  px-4 py-2 text-sm transition-all  ease-out hover:-translate-y-px', i === 0 && 'outline-solid outline-js-yellow']}
           >
             {filter}
           </button>
@@ -41,7 +41,7 @@ const filters = ['All projects', ...new Set(projects.map(({ project }) => projec
             widths={[500, 750, 1000]}
             sizes="(min-width: 1350px) 430px, (min-width: 768px) 33vw, 100vw"
             loading="eager"
-            class="aspect-video w-full rounded-sm object-cover"
+            class="aspect-video w-full rounded-xs object-cover"
           />
           <h2 class="animate-underline mb-2 mt-3 w-fit font-heading text-xl font-semibold">{project.data.title}</h2>
           <h3 class="mb-4 text-sm font-light">{project.data.excerpt}</h3>
@@ -61,7 +61,7 @@ const filters = ['All projects', ...new Set(projects.map(({ project }) => projec
     button.addEventListener('click', () => {
       const filter = button.dataset.filter!;
       buttons.forEach((b) => {
-        b.classList.toggle('outline', b === button);
+        b.classList.toggle('outline-solid', b === button);
         b.classList.toggle('outline-js-yellow', b === button);
       });
       cards.forEach((card) => (card.hidden = filter !== 'All projects' && card.dataset.type !== filter));

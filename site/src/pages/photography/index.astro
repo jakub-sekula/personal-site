@@ -15,9 +15,9 @@ const albums = (await getEntries(config.index)).filter(isVisible);
       albums.map((album) => (
         <a
           href={`/photography/${album.id}`}
-          class="group relative col-span-full flex aspect-[2.5] w-full items-center justify-center overflow-hidden rounded-sm md:col-span-3 md:aspect-[3/2] md:rounded-none"
+          class="group relative col-span-full flex aspect-[2.5] w-full items-center justify-center overflow-hidden rounded-xs md:col-span-3 md:aspect-3/2 md:rounded-none"
         >
-          <div class="absolute inset-0 bg-black/[15%] opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:opacity-100" />
+          <div class="absolute inset-0 bg-black/15 opacity-0 backdrop-blur-xs transition-all duration-300 group-hover:opacity-100" />
           <Picture
             src={album.data.cover}
             alt={album.data.title}

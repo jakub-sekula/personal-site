@@ -16,7 +16,7 @@ interface Props {
       Astro.props.albums.map((album) => (
         <a
           href={`/photography/${album.id}`}
-          class=" group relative aspect-[2.5] md:aspect-[3/2] col-span-full md:col-span-6 xl:col-span-4 flex w-full flex-col items-center
+          class=" group relative aspect-[2.5] md:aspect-3/2 col-span-full md:col-span-6 xl:col-span-4 flex w-full flex-col items-center
     justify-center gap-4 overflow-hidden rounded-md border border-text/10 px-3 py-6 font-bold dark:border-0"
           style="animation-delay: 0ms; transition-delay: 0ms"
         >
@@ -27,7 +27,7 @@ interface Props {
             placeholder={false}
             class="absolute -z-10 h-full w-full object-cover transition-all duration-500 ease-out group-hover:scale-105"
           />
-          <div class="absolute inset-0 bg-gradient-to-tr from-darkbg/50" />
+          <div class="absolute inset-0 bg-linear-to-tr from-darkbg/50" />
           <h4 class="z-10 font-heading text-2xl font-semibold uppercase text-white">{album.data.title}</h4>
         </a>
       ))

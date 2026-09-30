@@ -9,5 +9,5 @@ const { title, href } = Astro.props;
 const Element = href ? 'a' : 'span';
 ---
 
-<Element href={href} class="w-fit rounded-sm bg-text px-2 py-0.5
+<Element href={href} class="w-fit rounded-xs bg-text px-2 py-0.5
 		text-xs text-white dark:bg-darktext dark:text-text">{title}</Element>

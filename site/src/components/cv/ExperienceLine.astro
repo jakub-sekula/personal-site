@@ -14,9 +14,9 @@ const { entry, summaryView = false } = Astro.props;
 <article class="flex items-start gap-4">
   {
     entry.logo ? (
-      <Image src={entry.logo} alt={entry.title} width={100} height={100} class="h-10 w-10 rounded-sm object-contain" />
+      <Image src={entry.logo} alt={entry.title} width={100} height={100} class="h-10 w-10 rounded-xs object-contain" />
     ) : (
-      <div class="h-10 w-10 rounded-sm bg-neutral-500" />
+      <div class="h-10 w-10 rounded-xs bg-neutral-500" />
     )
   }
   <div class="w-full">
