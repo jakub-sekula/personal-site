@@ -1,6 +1,6 @@
 # jakubsekula.com
 
-Static site built with [Astro](https://docs.astro.build), deployed to Cloudflare Pages.
+Static site built with [Astro](https://docs.astro.build), deployed to Cloudflare (Workers static assets).
 Content lives in this repo as Markdown/MDX/YAML; photos live in a Cloudflare R2 bucket.
 
 It's a backend-less port of the old Next.js + Strapi site and looks the same: the components
@@ -64,12 +64,19 @@ Reference any photo from any post:
 
 ## Deploying (one-time setup)
 
+The site is a Cloudflare **Worker serving static assets** (see `wrangler.jsonc`), built by
+Workers Builds from GitHub.
+
 1. **R2**: create a bucket (e.g. `photos`), connect a custom domain such as
    `photos.jakubsekula.com`, and create an API token with Object Read & Write on it.
    Put the credentials in `site/.env` (see `.env.example`) and run `pnpm photos sync`.
-2. **Pages**: connect the GitHub repo. Root directory `site`, build command `pnpm build`,
-   output `dist`, env var `PUBLIC_PHOTOS_URL=https://photos.jakubsekula.com`.
-   The build fails on Pages if that variable is missing, rather than shipping broken images.
+2. **Worker** (Workers & Pages → Create → import the GitHub repo), then under Settings → Build:
+   root directory `site`, build command `pnpm build`, deploy command `npx wrangler deploy`,
+   build variable `PUBLIC_PHOTOS_URL=https://photos.jakubsekula.com`, and the production branch.
+   The Worker's name must match `name` in `wrangler.jsonc`. The build fails if
+   `PUBLIC_PHOTOS_URL` is missing, rather than shipping broken images.
+
+Every push to the production branch builds and deploys.
 
 ## Migrating from the old site
 

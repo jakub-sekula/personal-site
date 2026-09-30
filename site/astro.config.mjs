@@ -4,9 +4,10 @@ import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import react from '@astrojs/react';
 
-// Photos are served from R2 in production (public/photos is local-only).
-if (process.env.CF_PAGES && !process.env.PUBLIC_PHOTOS_URL) {
-  throw new Error('PUBLIC_PHOTOS_URL must be set in the Cloudflare Pages build environment');
+// Photos are served from R2 in production (public/photos is local-only), so a
+// Cloudflare build (Workers Builds or Pages) without the R2 URL must not ship.
+if ((process.env.WORKERS_CI || process.env.CF_PAGES) && !process.env.PUBLIC_PHOTOS_URL) {
+  throw new Error('PUBLIC_PHOTOS_URL must be set in the Cloudflare build variables');
 }
 
 // Tailwind (v3, same config as the old Next.js site) runs through PostCSS: see postcss.config.cjs.

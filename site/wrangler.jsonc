@@ -1,0 +1,15 @@
+// Deploys the built site (dist/) as a Cloudflare Worker serving static assets.
+// Workers Builds runs `pnpm build`, then `npx wrangler deploy` with this file.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Must match the Worker's name in the Cloudflare dashboard.
+  "name": "personal-site",
+  "compatibility_date": "2026-09-30",
+  "assets": {
+    "directory": "./dist",
+    // photography/greece.html is served at /photography/greece, as on the old site.
+    "html_handling": "auto-trailing-slash",
+    // Unknown URLs get dist/404.html with a 404 status.
+    "not_found_handling": "404-page"
+  }
+}
