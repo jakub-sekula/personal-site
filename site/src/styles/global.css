@@ -248,6 +248,23 @@ picture > source {
 .pswp .lightbox-sidebar.pswp__hide-on-close {
   z-index: 5;
 }
+/* Lightbox buttons use Lucide icons (see Lightbox.astro): stroked rather than PhotoSwipe's
+   filled icons, with a soft shadow so they stay visible over light photos. */
+.pswp .pswp__icn.lucide {
+  fill: none;
+  stroke: var(--pswp-icon-color);
+  stroke-width: 1.75;
+  padding: 4px;
+  filter: drop-shadow(0 0 2px rgb(0 0 0 / 0.5));
+}
+.pswp .pswp__button--arrow .pswp__icn.lucide {
+  padding: 14px;
+}
+.pswp--zoomed-in .pswp__icn.lucide-zoom-in,
+.pswp:not(.pswp--zoomed-in) .pswp__icn.lucide-zoom-out {
+  display: none;
+}
+
 /* Focus returned to a photo when the lightbox closes: no ring (see Lightbox.astro). */
 [data-lightbox-focus] {
   outline: none;

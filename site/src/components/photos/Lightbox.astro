@@ -28,6 +28,7 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
   import PhotoSwipeLightbox from 'photoswipe/lightbox';
   import type PhotoSwipe from 'photoswipe';
   import 'photoswipe/style.css';
+  import { ChevronLeft, Info, X, ZoomIn, ZoomOut } from 'lucide-static';
   import type { LightboxSlide } from '../../lib/lightbox';
 
   // Photos with a title, description or tags get a panel on the right on wide
@@ -46,8 +47,9 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
       return false;
     }
   })();
-  const INFO_ICON =
-    '<svg aria-hidden="true" class="pswp__icn" viewBox="0 0 24 24" width="32" height="32" style="fill:none;stroke:var(--pswp-icon-color);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;padding:4px"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>';
+  // Lucide icons for PhotoSwipe's buttons (styled in global.css, .pswp__icn.lucide).
+  const icon = (svg: string) => svg.trim().replace('class="lucide', 'class="pswp__icn lucide');
+  const INFO_ICON = icon(Info);
 
   /** Reflect the current photo and collapsed state in PhotoSwipe's root classes. */
   function applySidebarState(pswp: PhotoSwipe, slide?: LightboxSlide) {
@@ -108,6 +110,10 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
       pswpModule: () => import('photoswipe'),
       bgOpacity: 0.95,
       showHideAnimationType: 'zoom',
+      arrowPrevSVG: icon(ChevronLeft),
+      arrowNextSVG: icon(ChevronLeft), // PhotoSwipe mirrors it for "next"
+      closeSVG: icon(X),
+      zoomSVG: icon(ZoomIn) + icon(ZoomOut), // CSS shows the one that applies
       // PhotoSwipe would refocus the tile that was clicked, scrolling back to it;
       // we focus the tile of the photo being closed instead (see 'destroy').
       returnFocus: false,
