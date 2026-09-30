@@ -46,6 +46,9 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
       pswpModule: () => import('photoswipe'),
       bgOpacity: 0.95,
       showHideAnimationType: 'zoom',
+      // PhotoSwipe would refocus the tile that was clicked, scrolling back to it;
+      // we focus the tile of the photo being closed instead (see 'destroy').
+      returnFocus: false,
     });
 
     // Zoom in from (and back out to) the thumbnail that was clicked. Album tiles
@@ -86,7 +89,22 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
       history.replaceState(history.state, '', slide.href);
       if (slide.pageTitle) document.title = slide.pageTitle;
     };
-    lightbox.on('change', () => showInUrl(lightbox.pswp!.currIndex));
+    // Scroll the page behind the lightbox so the current photo's tile is on screen:
+    // closing then lands on it, and the zoom-out animation goes back into it.
+    const keepTileInView = (index: number) => {
+      const tile = tiles()[index];
+      if (!tile) return;
+      const { top, bottom } = tile.getBoundingClientRect();
+      const header = 64; // the fixed site header
+      if (top < header || bottom > window.innerHeight) tile.scrollIntoView({ block: 'center', behavior: 'instant' });
+    };
+
+    lightbox.on('change', () => {
+      showInUrl(lightbox.pswp!.currIndex);
+      keepTileInView(lightbox.pswp!.currIndex);
+    });
+    // Keyboard focus continues from the photo you were on, without scrolling.
+    lightbox.on('destroy', () => tiles()[lightbox.pswp?.currIndex ?? -1]?.focus({ preventScroll: true }));
     lightbox.on('close', () => {
       document.title = pageTitle;
       if (pushedHistory) {
@@ -94,8 +112,11 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
         history.back(); // back to the page the lightbox was opened from
       }
     });
-    // Browser back while open closes the lightbox.
     window.addEventListener('popstate', () => {
+      // Going back out of the lightbox mustn't restore the scroll position from when
+      // it opened (that would undo keepTileInView); see open().
+      history.scrollRestoration = 'auto';
+      // Browser back while open closes the lightbox.
       if (!pushedHistory) return;
       pushedHistory = false;
       document.title = pageTitle;
@@ -105,6 +126,7 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
     const open = (index: number) => {
       pageTitle = document.title;
       if (slides[index]?.href) {
+        history.scrollRestoration = 'manual';
         history.pushState({ lightbox: true }, '', slides[index].href);
         pushedHistory = true;
         showInUrl(index);
