@@ -159,7 +159,7 @@ export async function readAlbum(slug) {
 
 export async function writeAlbum(slug, { doc, body = '' }) {
   await mkdir(ALBUM_DIR, { recursive: true });
-  const fm = doc.toString({ lineWidth: 0 }).trimEnd();
+  const fm = doc.toString({ lineWidth: 0, flowCollectionPadding: false }).trimEnd();
   await writeFile(path.join(ALBUM_DIR, `${slug}.mdx`), `---\n${fm}\n---\n${body ? `\n${body.trim()}\n` : ''}`);
 }
 

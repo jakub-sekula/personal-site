@@ -16,6 +16,8 @@ const blog = defineCollection({
       date: z.coerce.date(),
       tags: z.array(z.string()).default([]),
       cover: image().optional(),
+      /** A photo from the library as the cover, instead of an image file next to the post. */
+      coverPhoto: photoRef.optional(),
       draft: z.boolean().default(false),
     }),
 });

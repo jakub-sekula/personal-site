@@ -5,6 +5,7 @@ import Page from '../../layouts/Page.astro';
 import PageWrapper from '../../components/PageWrapper.astro';
 import BlogPostCard from '../../components/blog/BlogPostCard.astro';
 import Icon from '../../components/Icon.astro';
+import Picture from '../../components/photos/Picture.astro';
 import { getPosts, tagSlug } from '../../lib/content';
 
 const [latest, ...older] = await getPosts();
@@ -20,6 +21,8 @@ const tagClass = 'rounded-xs bg-darkbg px-2 py-0.5 text-xs text-darktext dark:bg
           <div class="hover-group relative col-span-full mb-4 flex flex-col items-center">
             {latest.data.cover ? (
               <Image src={latest.data.cover} alt={latest.data.title} widths={[1000, 2000]} sizes="(min-width: 1024px) 1000px, 100vw" class="inset-0 aspect-video h-80 w-full rounded-md object-cover" />
+            ) : latest.data.coverPhoto ? (
+              <Picture src={latest.data.coverPhoto} alt={latest.data.title} sizes="(min-width: 1024px) 1000px, 100vw" eager class="inset-0 aspect-video h-80 w-full rounded-md object-cover" />
             ) : (
               <div class="inset-0 aspect-video h-80 w-full rounded-md bg-text object-cover" />
             )}

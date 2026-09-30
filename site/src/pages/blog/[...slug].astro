@@ -8,6 +8,8 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import TableOfContents from '../../components/common/TableOfContents.astro';
 import { mdxComponents } from '../../components/mdx';
+import Picture from '../../components/photos/Picture.astro';
+import { getPhoto } from '../../lib/photos';
 import { getPosts, tagSlug } from '../../lib/content';
 
 export const getStaticPaths = (async () => {
@@ -17,6 +19,10 @@ export const getStaticPaths = (async () => {
 
 const { post } = Astro.props;
 const { Content, headings } = await render(post);
+const coverPhoto = post.data.coverPhoto ? getPhoto(post.data.coverPhoto) : undefined;
+const preview = post.data.cover
+  ? { image: post.data.cover.src }
+  : coverPhoto && { image: coverPhoto.og.url, imageWidth: coverPhoto.og.width, imageHeight: coverPhoto.og.height };
 
 // Nest h3s under their h2, as the old client-side table of contents did.
 const toc: { id: string; title: string; items: { id: string; title: string }[] }[] = [];
@@ -26,17 +32,21 @@ for (const h of headings) {
 }
 ---
 
-<Base title={`${post.data.title} - Jakub Sekula`} description={post.data.description} image={post.data.cover?.src}>
+<Base title={`${post.data.title} - Jakub Sekula`} description={post.data.description} {...preview}>
   <Header />
   <main class="mx-auto grid w-full max-w-page grid-cols-12 pt-16">
     {
-      post.data.cover && (
+      (post.data.cover || coverPhoto) && (
         <div
           class="relative col-span-full mx-auto aspect-video max-h-[480px]
                      w-full overflow-hidden rounded-b-xl lg:col-span-10 lg:col-start-2
                      lg:mt-8 lg:rounded-xl"
         >
-          <Image src={post.data.cover} alt={post.data.title} widths={[960, 1920]} sizes="(min-width: 1024px) 1125px, 100vw" loading="eager" class="absolute h-full w-full object-cover" />
+          {post.data.cover ? (
+            <Image src={post.data.cover} alt={post.data.title} widths={[960, 1920]} sizes="(min-width: 1024px) 1125px, 100vw" loading="eager" class="absolute h-full w-full object-cover" />
+          ) : (
+            <Picture src={coverPhoto!.src} alt={post.data.title} sizes="(min-width: 1024px) 1125px, 100vw" eager class="absolute h-full w-full object-cover" />
+          )}
         </div>
       )
     }

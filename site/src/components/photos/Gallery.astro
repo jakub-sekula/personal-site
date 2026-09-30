@@ -1,11 +1,12 @@
 ---
 // Justified-rows gallery for use inside posts, opening the same lightbox as album pages.
 //   <Gallery album="greece" />                       every photo in an album
+//   <Gallery tag="ice" />                            every photo with a tag, across albums
 //   <Gallery photos={[{ src: 'greece/img-7785' }, { src: 'greece/img-7607', caption: '…' }]} />
 // Photos listed in an album link to their page and bring their title and
 // description; `caption` (Markdown) replaces the description here.
 import { getEntry } from 'astro:content';
-import { albumPhotos, findPhoto, inline, photoPageTitle } from '../../lib/content';
+import { albumPhotos, findPhoto, getPhotoTags, inline, photoPageTitle, tagSlug } from '../../lib/content';
 import { getPhoto } from '../../lib/photos';
 import { toSlides } from '../../lib/lightbox';
 import Picture from './Picture.astro';
@@ -13,6 +14,7 @@ import GalleryLightbox from './GalleryLightbox';
 
 interface Props {
   album?: string;
+  tag?: string;
   photos?: { src: string; caption?: string; alt?: string }[];
   /** Target row height in rem; rows flex around it to fill the width. */
   rowHeight?: number;
@@ -20,7 +22,7 @@ interface Props {
   sizes?: string;
 }
 
-const { album, rowHeight = 16, sizes } = Astro.props;
+const { album, tag, rowHeight = 16, sizes } = Astro.props;
 let refs = Astro.props.photos;
 
 if (album) {
@@ -28,7 +30,12 @@ if (album) {
   if (!entry) throw new Error(`<Gallery album="${album}">: no such album`);
   refs ??= albumPhotos(entry).map((p) => ({ src: p.photo.src }));
 }
-if (!refs?.length) throw new Error('<Gallery>: pass `album` or a non-empty `photos` list');
+if (tag) {
+  const tagged = (await getPhotoTags()).get(tagSlug(tag));
+  if (!tagged) throw new Error(`<Gallery tag="${tag}">: no photos have that tag`);
+  refs ??= tagged.photos.map((p) => ({ src: p.photo.src }));
+}
+if (!refs?.length) throw new Error('<Gallery>: pass `album`, `tag` or a non-empty `photos` list');
 
 const items = await Promise.all(
   refs.map(async (ref) => {
@@ -73,4 +80,5 @@ const tileClass = 'group relative block cursor-pointer overflow-hidden rounded-x
   {/* Soaks up leftover space so the last row isn't stretched (a lone photo should fill the width). */}
   {items.length > 1 && <span aria-hidden="true" style="flex-grow: 1000000000" />}
 </div>
-<GalleryLightbox client:visible target={id} slides={toSlides(items)} />
+{/* client:idle, not :visible: the island renders nothing until opened, so it never becomes "visible". */}
+<GalleryLightbox client:idle target={id} slides={toSlides(items)} />

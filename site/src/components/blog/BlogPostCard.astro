@@ -2,13 +2,14 @@
 // Port of components/blog/BlogPostCard.jsx
 import type { CollectionEntry } from 'astro:content';
 import { Image } from 'astro:assets';
+import Picture from '../photos/Picture.astro';
 
 interface Props {
   post: CollectionEntry<'blog'>;
 }
 
 const { post } = Astro.props;
-const { title, cover, tags, description } = post.data;
+const { title, cover, coverPhoto, tags, description } = post.data;
 const excerpt = description ?? post.body?.trim();
 ---
 
@@ -19,6 +20,8 @@ const excerpt = description ?? post.body?.trim();
   {
     cover ? (
       <Image src={cover} alt={title} widths={[500, 750]} sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" class="aspect-video h-36 w-full object-cover md:h-full" />
+    ) : coverPhoto ? (
+      <Picture src={coverPhoto} alt={title} sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" class="aspect-video h-36 w-full object-cover md:h-full" />
     ) : (
       <div class="aspect-video w-full bg-text" />
     )
