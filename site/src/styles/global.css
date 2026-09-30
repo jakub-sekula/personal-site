@@ -228,7 +228,7 @@ picture > source {
   display: none;
 }
 @media (min-width: 1024px) {
-  .pswp--has-meta .lightbox-info-button {
+  .pswp--has-sidebar .lightbox-info-button {
     display: flex;
   }
   .pswp--sidebar .lightbox-sidebar {
