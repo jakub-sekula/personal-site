@@ -102,6 +102,9 @@ async function sync() {
     region: 'auto',
     endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
     credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
+    // Newer AWS SDKs add CRC checksums to every request; only send them when S3 requires it.
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
   });
 
   const remote = new Set();

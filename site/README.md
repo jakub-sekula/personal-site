@@ -50,7 +50,7 @@ pnpm photos add portugal ~/Exports/portugal --title "🇵🇹 Portugal" --parent
 # Without --parent, add it to src/content/photography.yaml to list it on /photography.
 
 pnpm photos sync   # upload new variants to R2
-git add src && git commit -m "Add Portugal album" && git push   # Pages rebuilds
+git add src && git commit -m "Add Portugal album" && git push   # the Worker rebuilds and deploys
 ```
 
 Photo ids include a content hash, so a re-edited export gets new URLs (safe to cache forever).
