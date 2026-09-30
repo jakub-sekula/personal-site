@@ -14,10 +14,15 @@ if ((process.env.WORKERS_CI || process.env.CF_PAGES) && !process.env.PUBLIC_PHOT
 export default defineConfig({
   site: 'https://jakubsekula.com',
   // The old site's URLs had no trailing slash (/projects/disco-cube). Emitting
-  // projects/disco-cube.html makes Cloudflare Pages serve exactly those URLs.
+  // projects/disco-cube.html makes Cloudflare serve exactly those URLs.
   trailingSlash: 'ignore',
   build: { format: 'file' },
-  integrations: [mdx(), sitemap(), react()],
+  integrations: [
+    mdx(),
+    // The CV is noindex (see src/pages/cv.astro and public/_headers), so keep it out of the sitemap too.
+    sitemap({ filter: (page) => !/\/cv\/?$/.test(page) }),
+    react(),
+  ],
   markdown: {
     shikiConfig: {
       // Closest match to the old site's Prism "atomDark" code theme.

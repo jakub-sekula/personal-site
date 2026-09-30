@@ -1,0 +1,8 @@
+# Response headers for Cloudflare (Workers static assets). Not applied by `astro dev`/`preview`.
+
+# Keep the CV out of search engines. The page also has a robots meta tag, but the
+# PDF can't carry one, so it needs the header.
+/cv
+  X-Robots-Tag: noindex
+/jakub-sekula-cv.pdf
+  X-Robots-Tag: noindex
