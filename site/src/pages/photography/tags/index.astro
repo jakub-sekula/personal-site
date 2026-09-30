@@ -7,7 +7,7 @@ import { getPhotoTags } from '../../../lib/content';
 const tags = [...(await getPhotoTags())].sort(([, a], [, b]) => a.name.localeCompare(b.name));
 ---
 
-<Photography title="Photo tags - Jakub Sekula Photography" description="Browse photos by tag.">
+<Photography title="Photo tags - Jakub Sekula Photography" description="Browse photos by tag." noindex={tags.length === 0}>
   <header class="pt-4 pb-6 md:pt-0">
     <h1 class="font-heading text-3xl font-bold uppercase tracking-tight md:text-5xl">Tags</h1>
   </header>

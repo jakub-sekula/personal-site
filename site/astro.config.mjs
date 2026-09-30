@@ -20,7 +20,7 @@ export default defineConfig({
   integrations: [
     mdx(),
     // The CV is noindex (see src/pages/cv.astro and public/_headers), so keep it out of the sitemap too.
-    sitemap({ filter: (page) => !/\/cv\/?$/.test(page) }),
+    sitemap({ filter: (page) => !/\/(cv|projects)(\/|$)/.test(page) }),
     // Local photo editor at /dev/photos, only in `astro dev`.
     photoEditor(),
   ],

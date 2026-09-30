@@ -1,0 +1,36 @@
+---
+// A photo beside a block of text (stacked on narrow screens):
+//   <Side photo="iceland/dscf-1479">
+//
+//   Markdown text, as much as you like.
+//
+//   </Side>
+// side="right" puts the photo on the right; caption and alt work as for <Photo>.
+// Wider than the text by default (size="text" keeps it in the text column).
+import { findPhoto, inline } from '../../lib/content';
+import { STORY_WIDTHS, type StorySize } from '../../lib/story';
+import Gallery from './Gallery.astro';
+
+interface Props {
+  photo: string;
+  side?: 'left' | 'right';
+  /** Markdown; defaults to the photo's title. */
+  caption?: string;
+  alt?: string;
+  size?: StorySize;
+}
+
+const { photo, side = 'left', caption, alt, size = 'wide' } = Astro.props;
+const text = caption ?? (await findPhoto(photo))?.title;
+const half = Math.ceil(STORY_WIDTHS[size] / 2);
+---
+
+<div class:list={['my-12 grid items-center gap-x-10 gap-y-4 md:grid-cols-2', `story-${size}`]}>
+  <figure class:list={['not-prose', side === 'right' && 'md:order-2']}>
+    <Gallery photos={[{ src: photo, caption, alt }]} sizes={`(min-width: 768px) ${half}px, 100vw`} />
+    {text && <figcaption class="mt-2 text-sm font-light opacity-75" set:html={inline(text)} />}
+  </figure>
+  <div class="[&>:first-child]:mt-0 [&>:last-child]:mb-0">
+    <slot />
+  </div>
+</div>

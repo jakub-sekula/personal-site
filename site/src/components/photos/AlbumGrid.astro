@@ -1,0 +1,37 @@
+---
+// The album page's photo grid (3:2 tiles), for use in an album's MDX body or a post:
+//   <AlbumGrid />                                           every photo in this album
+//   <AlbumGrid photos={['dscf-1434', 'dscf-1479']} />      just these, in this order
+//   <AlbumGrid album="greece" />                           another album (required in posts)
+import { getEntry } from 'astro:content';
+import { albumPhotos } from '../../lib/content';
+import { getPhoto } from '../../lib/photos';
+import PhotoGrid from './PhotoGrid.astro';
+
+interface Props {
+  /** Defaults to the album whose page this is. */
+  album?: string;
+  /** Photo names (with or without "album/"); defaults to the whole album. */
+  photos?: string[];
+}
+
+const albumId = Astro.props.album ?? Astro.params.album;
+if (!albumId) throw new Error('<AlbumGrid>: pass `album` outside album pages');
+const entry = await getEntry('albums', albumId);
+if (!entry) throw new Error(`<AlbumGrid album="${albumId}">: no such album`);
+
+const all = albumPhotos(entry);
+const photos = Astro.props.photos
+  ? Astro.props.photos.map((name) => {
+      const src = getPhoto(name.includes('/') ? name : `${albumId}/${name}`).src;
+      const item = all.find((p) => p.photo.src === src);
+      if (!item) throw new Error(`<AlbumGrid>: ${name} isn't in the ${albumId} album`);
+      return item;
+    })
+  : all;
+const id = `grid-${Math.random().toString(36).slice(2, 10)}`;
+---
+
+<div class="not-prose story-wide my-8">
+  <PhotoGrid id={id} photos={photos} />
+</div>

@@ -18,6 +18,12 @@ const blog = defineCollection({
       cover: image().optional(),
       /** A photo from the library as the cover, instead of an image file next to the post. */
       coverPhoto: photoRef.optional(),
+      /**
+       * "story": a photo-led page. Opens with the cover photo full screen, has no
+       * table of contents, and photos can be wider than the text (see lib/story.ts).
+       */
+      // (Not `layout`: in MDX frontmatter Astro reads that as a layout component to import.)
+      format: z.enum(['post', 'story']).default('post'),
       draft: z.boolean().default(false),
     }),
 });
@@ -67,7 +73,13 @@ const albums = defineCollection({
   loader: glob({ pattern: '*.{md,mdx}', base: './src/content/albums' }),
   schema: z.object({
     title: z.string(),
+    /** Plain text, in the album header. (The MDX body, if any, lays out the album page: see [album].astro.) */
+    description: z.string().optional(),
     cover: photoRef,
+    /** The album header: the cover photo full screen, edge to edge (default), or a banner. */
+    hero: z.enum(['full', 'banner']).optional(),
+    /** Which part of the cover stays in view when it's cropped (CSS object-position, e.g. "50% 30%"). */
+    coverPosition: z.string().optional(),
     date: z.coerce.date(),
     draft: z.boolean().default(false),
     /** Shown under the description in the album header. */

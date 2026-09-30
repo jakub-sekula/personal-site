@@ -2,6 +2,9 @@
 // PhotoSwipe lightbox for a gallery. The gallery markup is plain HTML: any
 // element inside #target with data-slide="<index>" opens that slide.
 //
+// Galleries inside an element with [data-lightbox-group] (e.g. a post) share
+// one lightbox, in page order, so it steps through every photo on the page.
+//
 // Each photo has its own page. While the lightbox is open, the address bar
 // shows the current photo's page (so it can be copied or shared) and the back
 // button closes the lightbox. Cmd/Ctrl-click still opens the page itself.
@@ -80,17 +83,32 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
     }
   }
 
-  function setup(data: HTMLScriptElement) {
-    const root = document.getElementById(data.dataset.lightbox!);
-    if (!root) return;
-    const slides: LightboxSlide[] = JSON.parse(data.textContent!);
-    const closeToPage = data.dataset.closeToPage !== undefined;
+  // Slide elements in a gallery root; on photo pages the root itself is one.
+  const tilesIn = (root: HTMLElement) => [...(root.matches('[data-slide]') ? [root] : []), ...root.querySelectorAll<HTMLElement>('[data-slide]')];
+
+  /** One lightbox over one or more galleries (their data blocks, in page order). */
+  function setup(blocks: HTMLScriptElement[]) {
+    const roots: HTMLElement[] = [];
+    const slides: LightboxSlide[] = [];
+    for (const block of blocks) {
+      const root = document.getElementById(block.dataset.lightbox!);
+      if (!root) continue;
+      // Renumber this gallery's tiles to follow the galleries before it.
+      const offset = slides.length;
+      if (offset) tilesIn(root).forEach((tile) => (tile.dataset.slide = String(offset + Number(tile.dataset.slide))));
+      roots.push(root);
+      slides.push(...JSON.parse(block.textContent!));
+    }
+    if (!roots.length) return;
+    const closeToPage = blocks[0].dataset.closeToPage !== undefined;
     const hasThumbs = slides.length > 1;
     // The element for a slide (a gallery tile, or the big photo on a photo page).
-    // On photo pages the root itself is the slide element, so check it too.
     const tileFor = (index: number) => {
-      const selector = `[data-slide="${index}"]`;
-      return root.matches(selector) ? root : root.querySelector<HTMLElement>(selector);
+      for (const root of roots) {
+        const tile = tilesIn(root).find((t) => t.dataset.slide === String(index));
+        if (tile) return tile;
+      }
+      return null;
     };
 
     const lightbox = new PhotoSwipeLightbox({
@@ -312,27 +330,35 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
       lightbox.loadAndOpen(index);
     };
 
-    root.addEventListener('click', (e) => {
-      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-slide]');
-      if (!el || !root.contains(el)) return;
-      // Links inside a clickable photo (e.g. prev/next on photo pages) stay links.
-      const link = (e.target as HTMLElement).closest('a');
-      if (link && link !== el && el.contains(link)) return;
-      // Let modified clicks open the photo page (new tab, etc.).
-      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      e.preventDefault();
-      open(Number(el.dataset.slide));
-    });
-    // Links already turn Enter into a click; this covers non-link tiles.
-    root.addEventListener('keydown', (e) => {
-      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-slide]');
-      if (!el || el.tagName === 'A' || !root.contains(el) || (e.key !== 'Enter' && e.key !== ' ')) return;
-      e.preventDefault();
-      open(Number(el.dataset.slide));
-    });
+    for (const root of roots) {
+      root.addEventListener('click', (e) => {
+        const el = (e.target as HTMLElement).closest<HTMLElement>('[data-slide]');
+        if (!el || !root.contains(el)) return;
+        // Links inside a clickable photo (e.g. prev/next on photo pages) stay links.
+        const link = (e.target as HTMLElement).closest('a');
+        if (link && link !== el && el.contains(link)) return;
+        // Let modified clicks open the photo page (new tab, etc.).
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        open(Number(el.dataset.slide));
+      });
+      // Links already turn Enter into a click; this covers non-link tiles.
+      root.addEventListener('keydown', (e) => {
+        const el = (e.target as HTMLElement).closest<HTMLElement>('[data-slide]');
+        if (!el || el.tagName === 'A' || !root.contains(el) || (e.key !== 'Enter' && e.key !== ' ')) return;
+        e.preventDefault();
+        open(Number(el.dataset.slide));
+      });
+    }
 
     lightbox.init();
   }
 
-  document.querySelectorAll<HTMLScriptElement>('script[data-lightbox]').forEach(setup);
+  // Group the data blocks: those inside the same [data-lightbox-group] share a lightbox.
+  const groups = new Map<Element, HTMLScriptElement[]>();
+  for (const block of document.querySelectorAll<HTMLScriptElement>('script[data-lightbox]')) {
+    const key = document.getElementById(block.dataset.lightbox!)?.closest('[data-lightbox-group]') ?? block;
+    groups.set(key, [...(groups.get(key) ?? []), block]);
+  }
+  groups.forEach(setup);
 </script>

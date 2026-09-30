@@ -24,7 +24,7 @@ const posts = (await getEntries(project.data.posts)).filter(isVisible);
 const hasDescription = !!project.body?.trim();
 ---
 
-<Page title={`${title} - Jakub Sekula`} description={excerpt ?? 'Generic project'} image={cover.src}>
+<Page title={`${title} - Jakub Sekula`} description={excerpt ?? 'Generic project'} image={cover.src} noindex>
   <main class="mx-auto mt-6 grid w-full max-w-6xl grid-cols-12 gap-2 px-6 md:mt-6 lg:mt-12 xl:px-4 2xl:px-0 pt-16">
     <div class="col-span-full flex flex-col items-center gap-4">
       <a href="/projects" class="flex gap-1 text-sm font-light  ">

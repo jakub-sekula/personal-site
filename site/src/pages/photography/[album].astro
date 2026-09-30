@@ -1,10 +1,15 @@
 ---
 // Port of the old app/photography/[category]/page.tsx + LightboxWrapper.
+// An album with an MDX body is laid out by it (text, <Photo>, <Row>, <Side>,
+// <AlbumGrid> …); without one, the page is the classic grid of every photo.
 import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
 import Photography from '../../layouts/Photography.astro';
 import Icon from '../../components/Icon.astro';
 import Picture from '../../components/photos/Picture.astro';
+import Cover from '../../components/photos/Cover.astro';
 import PhotoGrid from '../../components/photos/PhotoGrid.astro';
+import { mdxComponents } from '../../components/mdx';
 import { albumName, albumPhotos, getAlbums, getChildAlbums } from '../../lib/content';
 import { getPhoto } from '../../lib/photos';
 
@@ -15,7 +20,10 @@ export const getStaticPaths = (async () => {
 
 const { album } = Astro.props;
 const { title } = album.data;
-const description = album.body?.trim() ?? '';
+const description = album.data.description ?? '';
+const { Content } = await render(album);
+const hasLayout = !!album.body?.trim();
+const fullHero = album.data.hero !== 'banner';
 const children = await getChildAlbums(album);
 const cover = getPhoto(album.data.cover);
 const photos = albumPhotos(album);
@@ -26,24 +34,38 @@ const photos = albumPhotos(album);
   imageWidth={cover.og.width}
   imageHeight={cover.og.height}
 >
-  <section class="relative flex h-screen max-h-[400px] max-w-[1920px] items-center justify-center overflow-hidden rounded-xs">
-    <div class="absolute inset-0 z-10 h-full bg-linear-to-tr from-darkbg/90"></div>
-    <Picture src={album.data.cover} alt={title} sizes="(min-width: 1350px) 1080px, 100vw" eager class="absolute inset-0 z-0 mx-auto h-full w-full object-cover" />
-    <div class="z-20 p-6 flex w-full max-w-page flex-col items-center text-white ">
-      <a href="/photography" class="mb-4 flex items-center gap-1 text-sm font-light">
-        <Icon name="chevron-left" size={16} />
-        Back to albums
-      </a>
-      <h1
-        class="mb-3 wrap-break-word font-heading text-3xl md:text-5xl font-bold
-                uppercase leading-none tracking-tight xl:text-[5.5rem] 2xl:text-[6rem]"
-      >
-        {title}
-      </h1>
-      <p class="max-w-[75ch] text-center text-sm font-light md:text-lg">{description}</p>
-      {album.data.tags.map((tag) => <span>{tag}</span>)}
-    </div>
-  </section>
+  {
+    fullHero ? (
+      // The cover photo full screen, edge to edge, above the sidebar (`hero: banner` for the old banner).
+      <Cover slot="cover" photo={album.data.cover} position={album.data.coverPosition} eager id="hero-section" class="my-0!">
+        <a href="/photography" class="flex items-center gap-1 text-sm font-light">
+          <Icon name="chevron-left" size={16} />
+          Back to albums
+        </a>
+        <h1 class="uppercase">{title}</h1>
+        {description && <p>{description}</p>}
+      </Cover>
+    ) : (
+      <section class="relative flex h-screen max-h-[400px] max-w-[1920px] items-center justify-center overflow-hidden rounded-xs">
+        <div class="absolute inset-0 z-10 h-full bg-linear-to-tr from-darkbg/90"></div>
+        <Picture src={album.data.cover} alt={title} sizes="(min-width: 1350px) 1080px, 100vw" eager class="absolute inset-0 z-0 mx-auto h-full w-full object-cover" />
+        <div class="z-20 p-6 flex w-full max-w-page flex-col items-center text-white ">
+          <a href="/photography" class="mb-4 flex items-center gap-1 text-sm font-light">
+            <Icon name="chevron-left" size={16} />
+            Back to albums
+          </a>
+          <h1
+            class="mb-3 wrap-break-word font-heading text-3xl md:text-5xl font-bold
+                    uppercase leading-none tracking-tight xl:text-[5.5rem] 2xl:text-[6rem]"
+          >
+            {title}
+          </h1>
+          <p class="max-w-[75ch] text-center text-sm font-light md:text-lg">{description}</p>
+          {album.data.tags.map((tag) => <span>{tag}</span>)}
+        </div>
+      </section>
+    )
+  }
 
   {
     children.length > 0 && (
@@ -68,5 +90,14 @@ const photos = albumPhotos(album);
     )
   }
 
-  <PhotoGrid id={`gallery-${album.id}`} photos={photos} />
+  {
+    hasLayout ? (
+      // Every photo on the page opens in one lightbox, in page order.
+      <div data-lightbox-group class="story story-inset prose max-w-none pt-10 pb-12 font-light md:prose-lg dark:prose-invert prose-headings:font-heading prose-headings:tracking-tight">
+        <Content components={mdxComponents} />
+      </div>
+    ) : (
+      <PhotoGrid id={`gallery-${album.id}`} photos={photos} />
+    )
+  }
 </Photography>

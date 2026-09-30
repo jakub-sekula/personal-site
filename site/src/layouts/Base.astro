@@ -1,6 +1,7 @@
 ---
 // HTML shell, ported from the old app/layout.tsx + ThemeWrapper.
 import '../styles/global.css';
+import { pagePath } from '../lib/url';
 
 interface Props {
   title?: string;
@@ -9,12 +10,12 @@ interface Props {
   image?: string;
   imageWidth?: number;
   imageHeight?: number;
-  /** Ask search engines not to index this page. */
+  /** Ask search engines not to index this page. (Every page asks AI crawlers not to use it.) */
   noindex?: boolean;
 }
 
 const { title = 'Jakub Sekula', description = 'Web developer, mechanical engineer, and photography enthusiast.', image, imageWidth, imageHeight, noindex = false } = Astro.props;
-const canonical = new URL(Astro.url.pathname, Astro.site);
+const canonical = new URL(pagePath(Astro.url), Astro.site);
 ---
 
 <!doctype html>
@@ -24,7 +25,10 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    {noindex && <meta name="robots" content="noindex" />}
+    {/* noai/noimageai: no use of the text or images for AI training (see public/robots.txt). */}
+    <meta name="robots" content={noindex ? 'noindex, noai, noimageai' : 'noai, noimageai'} />
+    {/* EU text-and-data-mining opt-out (TDMRep; also /.well-known/tdmrep.json). */}
+    <meta name="tdm-reservation" content="1" />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <meta property="og:title" content={title} />

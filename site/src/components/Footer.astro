@@ -1,6 +1,8 @@
 ---
 // Port of the old components/layout/Footer.jsx.
 import Icon from './Icon.astro';
+
+const year = new Date().getFullYear();
 ---
 
 <footer
@@ -21,6 +23,10 @@ import Icon from './Icon.astro';
       dark:border-neutral-800 dark:text-zinc-600"
   >
     <span class="text-base">Made with ❤️ in Bristol, UK</span>
+    <p class="max-w-md px-6 text-center">
+      © {year} Jakub Sekula. All photos are my own and all rights are reserved: please don't reuse them,
+      or use anything on this site to train AI, without permission.
+    </p>
     <a href="https://github.com/jakub-sekula/personal-site" class="flex items-center gap-2">
       View page source on Github <Icon name="github" size={14} />
     </a>

@@ -27,7 +27,19 @@ const { album, photo, title, descriptionHtml, description, tags, alt, index } = 
 const albumHref = `/photography/${album.id}`;
 const metaDescription = description
   ? plainText(description)
-  : album.body?.trim() || `Photo ${index + 1} of ${total} from ${albumName(album)}.`;
+  : album.data.description || `Photo ${index + 1} of ${total} from ${albumName(album)}.`;
+// Credit for search engines (Google Images shows the creator and copyright).
+const imageJsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'ImageObject',
+  contentUrl: new URL(photo.largest, Astro.site).href,
+  ...(title && { name: title }),
+  ...(description && { description: plainText(description) }),
+  creator: { '@type': 'Person', name: 'Jakub Sekula', url: Astro.site!.href },
+  creditText: 'Jakub Sekula',
+  copyrightHolder: { '@type': 'Person', name: 'Jakub Sekula' },
+  copyrightNotice: `© ${album.data.date.getFullYear()} Jakub Sekula. All rights reserved.`,
+}).replace(/</g, '\\u003c');
 // Clicking the photo opens the whole album in the lightbox, starting here.
 const slides = toSlides(photos.map((p) => ({ ...p, pageTitle: photoPageTitle(p) })));
 ---
@@ -40,6 +52,7 @@ const slides = toSlides(photos.map((p) => ({ ...p, pageTitle: photoPageTitle(p) 
   imageHeight={photo.og.height}
 >
   <article class="flex flex-col gap-6 pb-12">
+    <script type="application/ld+json" set:html={imageJsonLd} />
     <nav class="flex items-center justify-between gap-4 text-sm font-light" aria-label="Album">
       <a href={albumHref} class="flex items-center gap-1 hover:underline">
         <Icon name="chevron-left" size={16} />
@@ -110,6 +123,7 @@ const slides = toSlides(photos.map((p) => ({ ...p, pageTitle: photoPageTitle(p) 
           </ul>
         )
       }
+      <p class="text-xs font-light opacity-60">© {album.data.date.getFullYear()} Jakub Sekula. All rights reserved.</p>
       <nav class="flex justify-between gap-4 pt-2 text-sm font-light" aria-label="Photos">
         {
           prev ? (

@@ -1,8 +1,10 @@
 ---
-// A single full-width photo for use in MDX:
+// A single photo for use in MDX:
 //   <Photo src="greece/img-7785" />                  caption = the photo's title
 //   <Photo src="greece/img-7785" caption="Chania harbour at dusk" />
+//   <Photo src="greece/img-7785" size="full" />      edge to edge in story posts ("wide": wider than the text)
 import { findPhoto, inline } from '../../lib/content';
+import { storySizes, type StorySize } from '../../lib/story';
 import Gallery from './Gallery.astro';
 
 interface Props {
@@ -10,13 +12,14 @@ interface Props {
   /** Markdown; defaults to the photo's title. */
   caption?: string;
   alt?: string;
+  size?: StorySize;
 }
 
-const { src, caption, alt } = Astro.props;
+const { src, caption, alt, size = 'text' } = Astro.props;
 const text = caption ?? (await findPhoto(src))?.title;
 ---
 
-<figure class="not-prose my-8">
-  <Gallery photos={[{ src, caption, alt }]} sizes="(min-width: 768px) 768px, 100vw" />
-  {text && <figcaption class="mt-2 text-center text-sm font-light opacity-75" set:html={inline(text)} />}
+<figure class:list={['not-prose my-8', `story-${size}`]}>
+  <Gallery photos={[{ src, caption, alt }]} sizes={storySizes(size)} />
+  {text && <figcaption class="story-caption mt-2 text-center text-sm font-light opacity-75" set:html={inline(text)} />}
 </figure>

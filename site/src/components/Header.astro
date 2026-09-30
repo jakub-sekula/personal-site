@@ -3,6 +3,7 @@
 // Behaviour kept: hides on scroll down, transparent over the homepage hero,
 // full-screen menu on mobile. React state is replaced by the script below.
 import Icon from './Icon.astro';
+import { pagePath } from '../lib/url';
 
 const links = [
   { label: 'Projects', href: '/projects', color: 'blue' },
@@ -17,17 +18,22 @@ const COLORS = {
   yellow: 'after:bg-js-yellow',
 };
 
-const pathname = Astro.url.pathname.replace(/\/$/, '') || '/';
-const isHome = pathname === '/';
+interface Props {
+  /** Transparent over a full-screen photo at the top of the page (#hero-section), as on the homepage. */
+  overHero?: boolean;
+}
+
+const pathname = pagePath(Astro.url);
+const overHero = pathname === '/' || !!Astro.props.overHero;
 const section = `/${pathname.split('/')[1]}`;
 ---
 
 <header
   id="site-header"
   data-active="false"
-  data-home={isHome ? 'true' : undefined}
+  data-hero={overHero ? 'true' : undefined}
   class:list={[
-    isHome ? 'text-darktext' : 'text-text',
+    overHero ? 'text-darktext' : 'text-text',
     'top-0',
     // Server-rendered state is "not over the hero", as on the old site; the script takes over.
     'data-[active=false]:bg-white/90 dark:text-darktext dark:data-[active=false]:bg-darkbg/90 dark:data-[active=false]:backdrop-blur-md md:text-text dark:stroke-darktext md:stroke-text',
@@ -105,7 +111,7 @@ const section = `/${pathname.split('/')[1]}`;
   const button = document.getElementById('nav-menu-toggle')!;
   const nav = document.getElementById('site-navigation')!;
   const burger = header.querySelector<SVGElement>('[data-stroke]')!;
-  const isHome = header.dataset.home === 'true';
+  const overHero = header.dataset.hero === 'true';
 
   // Class sets from the old component: over the hero vs. everywhere else.
   const ON_HERO = ['text-darktext', 'stroke-darktext'];
@@ -114,7 +120,7 @@ const section = `/${pathname.split('/')[1]}`;
   const BURGER_ON_HERO = ['stroke-darktext'];
   const BURGER_OFF_HERO = ['dark:stroke-darktext', 'stroke-text'];
 
-  const hero = isHome ? document.getElementById('hero-section') : null;
+  const hero = overHero ? document.getElementById('hero-section') : null;
   let lastY = window.scrollY;
   let direction: 'up' | 'down' | null = null;
 

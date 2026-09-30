@@ -5,6 +5,7 @@ import Base from './Base.astro';
 import Header from '../components/Header.astro';
 import Icon from '../components/Icon.astro';
 import { isVisible } from '../lib/content';
+import { pagePath } from '../lib/url';
 
 type Props = Parameters<typeof Base>[0];
 
@@ -16,16 +17,19 @@ const sidebar = await Promise.all(
   })),
 );
 
-const path = Astro.url.pathname.replace(/\/$/, '');
+const path = pagePath(Astro.url);
 const current = path.split('/').at(-1);
 // An album link is highlighted on the album and on its photos' pages.
 const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`);
 const navLink = 'font-headings relative text-sm font-light uppercase';
+const hasCover = Astro.slots.has('cover');
 ---
 
 <Base {...Astro.props}>
-  <Header />
-  <div class="mx-auto flex h-full min-h-screen w-full max-w-page md:w-screen pt-16">
+  {/* A full-screen cover (slot="cover") goes above the sidebar, with the header over it. */}
+  <Header overHero={hasCover} />
+  <slot name="cover" />
+  <div class:list={['mx-auto flex h-full min-h-screen w-full max-w-page md:w-screen', hasCover ? 'pt-4' : 'pt-16']}>
     <aside
       class="hidden h-full w-full max-w-[20%] flex-col gap-6 px-4 py-12 pb-px text-text backdrop-blur-lg transition-all duration-200 dark:bg-darkbg/70 dark:text-darktext md:flex"
     >

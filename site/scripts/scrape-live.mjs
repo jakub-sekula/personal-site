@@ -261,7 +261,8 @@ for (const slug of albumSlugs) {
     if (caption && !/\.(jpe?g|png|webp)$/i.test(caption)) item.set('description', caption);
     if (starts.has(idx)) item.set('newSection', true);
   });
-  await writeAlbum(slug, { doc, body: album.description ?? '' });
+  if (album.description?.trim()) doc.set('description', album.description.trim());
+  await writeAlbum(slug, { doc });
 }
 
 // Drop processed photos (and whole albums) that no longer exist on the live site.

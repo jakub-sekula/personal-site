@@ -1,0 +1,45 @@
+---
+// A full-screen photo with text over it, edge to edge: a chapter break in a story
+// (story posts also open with one, made from the post's coverPhoto):
+//   <Cover photo="iceland/dscf-0620">
+//
+//   ## The coast
+//
+//   A line or two of Markdown.
+//
+//   </Cover>
+// position="50% 30%" picks the part of the photo kept in view when it's cropped
+// to the screen (CSS object-position; the default is the centre).
+import { findPhoto } from '../../lib/content';
+import Picture from './Picture.astro';
+
+interface Props {
+  photo: string;
+  alt?: string;
+  position?: string;
+  /** For the first thing on the page. */
+  eager?: boolean;
+  id?: string;
+  class?: string;
+}
+
+const { photo, position, eager = false, id, class: className } = Astro.props;
+const listed = await findPhoto(photo);
+const alt = Astro.props.alt ?? listed?.alt ?? '';
+---
+
+<section id={id} class:list={['story-full not-prose relative my-16 flex min-h-svh items-end overflow-hidden bg-black text-white', className]}>
+  <Picture src={photo} alt={alt} sizes="100vw" eager={eager} position={position} class="absolute inset-0 size-full object-cover" />
+  {/* The site header sits over the page's opening cover: keep its links readable on bright skies. */}
+  {eager && <div class="absolute inset-x-0 top-0 h-40 bg-linear-to-b from-black/50 to-transparent" />}
+  <div class="relative w-full bg-linear-to-t from-black/75 via-black/35 to-transparent">
+    <div
+      class="mx-auto max-w-[75rem] px-6 pt-48 pb-16 md:pb-24 [&>*+*]:mt-4
+             [&_h1]:font-heading [&_h1]:text-5xl [&_h1]:font-bold [&_h1]:leading-[1.05] [&_h1]:tracking-tight md:[&_h1]:text-7xl
+             [&_h2]:font-heading [&_h2]:text-4xl [&_h2]:font-semibold [&_h2]:leading-tight [&_h2]:tracking-tight md:[&_h2]:text-5xl
+             [&_p]:max-w-2xl [&_p]:font-light md:[&_p]:text-lg"
+    >
+      <slot />
+    </div>
+  </div>
+</section>

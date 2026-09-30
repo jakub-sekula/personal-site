@@ -1,8 +1,18 @@
 # Response headers for Cloudflare (Workers static assets). Not applied by `astro dev`/`preview`.
 
-# Keep the CV out of search engines. The page also has a robots meta tag, but the
-# PDF can't carry one, so it needs the header.
+# Every page and file: no use for AI training (noai/noimageai), and the EU
+# text-and-data-mining opt-out (TDMRep). See also robots.txt.
+/*
+  X-Robots-Tag: noai, noimageai
+  tdm-reservation: 1
+
+# Keep the CV and projects out of search engines. The pages also have a robots
+# meta tag, but the PDF can't carry one, so it needs the header.
 /cv
   X-Robots-Tag: noindex
 /jakub-sekula-cv.pdf
+  X-Robots-Tag: noindex
+/projects
+  X-Robots-Tag: noindex
+/projects/*
   X-Robots-Tag: noindex

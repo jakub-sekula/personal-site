@@ -3,6 +3,7 @@
 //   <Gallery album="greece" />                       every photo in an album
 //   <Gallery tag="ice" />                            every photo with a tag, across albums
 //   <Gallery photos={[{ src: 'greece/img-7785' }, { src: 'greece/img-7607', caption: '…' }]} />
+//   <Gallery album="greece" size="wide" />           wider than the text, in story posts
 // Photos listed in an album link to their page and bring their title and
 // description; `caption` (Markdown) replaces the description here.
 import { getEntry } from 'astro:content';
@@ -11,6 +12,7 @@ import { getPhoto } from '../../lib/photos';
 import { toSlides } from '../../lib/lightbox';
 import Picture from './Picture.astro';
 import Lightbox from './Lightbox.astro';
+import { STORY_WIDTHS, type StorySize } from '../../lib/story';
 
 interface Props {
   album?: string;
@@ -20,9 +22,14 @@ interface Props {
   rowHeight?: number;
   /** Override the computed `sizes` (e.g. for a single full-width photo). */
   sizes?: string;
+  /** Width in story posts (see lib/story.ts). */
+  size?: StorySize;
+  /** Every photo in one row at the same height, however many there are (see Row.astro). */
+  singleRow?: boolean;
+  class?: string;
 }
 
-const { album, tag, rowHeight = 16, sizes } = Astro.props;
+const { album, tag, rowHeight = 16, sizes, size, singleRow = false, class: className } = Astro.props;
 let refs = Astro.props.photos;
 
 if (album) {
@@ -50,21 +57,30 @@ const items = await Promise.all(
       descriptionHtml: ref.caption ? inline(ref.caption) : listed?.descriptionHtml,
       alt: ref.alt ?? listed?.alt ?? ref.caption?.replace(/[*_`[\]]|\(.*?\)/g, '') ?? 'Photo',
       pageTitle: listed && photoPageTitle(listed),
-      // Rendered width ≈ ratio × row height; generous so 2x screens stay sharp.
-      sizes: sizes ?? `(min-width: 640px) ${Math.ceil(ratio * rowHeight * 16 * 1.25)}px, 100vw`,
     };
   }),
 );
+// Rendered width ≈ ratio × row height (generous, so 2x screens stay sharp); in a
+// single row, the photo's share of the row's width.
+const totalRatio = items.reduce((sum, item) => sum + item.ratio, 0);
+const maxWidth = STORY_WIDTHS[size ?? 'text'];
+const sizesFor = (ratio: number) =>
+  sizes ??
+  (singleRow
+    ? `(min-width: ${maxWidth}px) ${Math.ceil((maxWidth * ratio) / totalRatio)}px, ${Math.ceil((100 * ratio) / totalRatio)}vw`
+    : `(min-width: 640px) ${Math.ceil(ratio * rowHeight * 16 * 1.25)}px, 100vw`);
 const id = `gallery-${Math.random().toString(36).slice(2, 10)}`;
 const tileClass = 'group relative block cursor-pointer overflow-hidden rounded-xs';
 ---
 
-<div id={id} class="not-prose flex flex-wrap gap-2">
+<div id={id} class:list={['not-prose flex gap-2', singleRow ? 'flex-nowrap' : 'flex-wrap', size && `story-${size}`, className]}>
   {
     items.map((item, i) => {
-      const style = `flex: ${item.ratio} 1 ${item.ratio * rowHeight}rem; aspect-ratio: ${item.ratio}`;
+      // In a single row the basis is tiny so nothing wraps, and widths grow in
+      // proportion to the aspect ratios: every photo ends up the same height.
+      const style = `flex: ${item.ratio} 1 ${item.ratio * (singleRow ? 1 : rowHeight)}rem; aspect-ratio: ${item.ratio}`;
       const picture = (
-        <Picture src={item.photo.src} alt={item.alt} sizes={item.sizes} class="size-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+        <Picture src={item.photo.src} alt={item.alt} sizes={sizesFor(item.ratio)} class="size-full object-cover transition duration-500 group-hover:scale-[1.03]" />
       );
       return item.href ? (
         <a href={item.href} data-slide={i} class={tileClass} style={style}>
@@ -78,6 +94,6 @@ const tileClass = 'group relative block cursor-pointer overflow-hidden rounded-x
     })
   }
   {/* Soaks up leftover space so the last row isn't stretched (a lone photo should fill the width). */}
-  {items.length > 1 && <span aria-hidden="true" style="flex-grow: 1000000000" />}
+  {items.length > 1 && !singleRow && <span aria-hidden="true" style="flex-grow: 1000000000" />}
 </div>
 <Lightbox target={id} slides={toSlides(items)} />

@@ -13,7 +13,7 @@ const projects = await Promise.all(
 const filters = ['All projects', ...new Set(projects.map(({ project }) => project.data.type))];
 ---
 
-<Page title="Projects - Jakub Sekula" description="Projects homepage">
+<Page title="Projects - Jakub Sekula" description="Projects homepage" noindex>
   <PageWrapper title="My projects">
     <div class="col-span-full flex justify-center gap-3" id="project-filters">
       {

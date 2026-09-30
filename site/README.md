@@ -25,7 +25,7 @@ pnpm check      # type-check .astro files and content schemas
 | Projects | `src/content/projects/<slug>/index.{md,mdx}`, cover alongside |
 | Tools (skills, "tools used") | `src/content/tools.yaml`, icons in `src/assets/tools/` |
 | Blog posts | `src/content/blog/<slug>/index.{md,mdx}`, images alongside |
-| Photo albums | `src/content/albums/<slug>.mdx`: frontmatter lists photos (or child `albums`), body is the intro |
+| Photo albums | `src/content/albums/<slug>.mdx`: frontmatter has the description, cover and photos (or child `albums`); an optional MDX body lays out the page |
 | Photo metadata | `src/data/photos/<album>.json`, **generated**, don't edit by hand |
 | CV | `src/content/cv.yaml`, logos in `src/assets/cv/`, PDF in `public/` |
 | Components usable in MDX without importing | `src/components/mdx/index.ts` |
@@ -38,7 +38,7 @@ rendering a hole. Anything with `draft: true` shows in `pnpm dev` only.
 ## Photos
 
 Originals never go in git. `pnpm photos add` resizes each one into AVIF + WebP at
-640/1280/1920/2560px plus a 1200px JPEG for link previews (EXIF and GPS stripped), writes
+640/1280/1920/2560px plus a 1200px JPEG for link previews (camera data and GPS stripped; your name and copyright added, see `CREDIT` in `scripts/lib/photos.mjs`), writes
 them to `public/photos/` (git-ignored), records dimensions and a blur placeholder in
 `src/data/photos/<album>.json`, and appends the photos to the album file.
 
@@ -46,7 +46,7 @@ them to `public/photos/` (git-ignored), records dimensions and a blur placeholde
 # New album (or add more photos to an existing one)
 pnpm photos add portugal ~/Exports/portugal --title "🇵🇹 Portugal" --parent places
 
-# Edit src/content/albums/portugal.mdx: reorder, add titles/descriptions/tags, pick the cover, write an intro.
+# Edit src/content/albums/portugal.mdx: reorder, add titles/descriptions/tags, pick the cover, add a description.
 # Without --parent, add it to src/content/photography.yaml to list it on /photography.
 
 pnpm photos sync   # upload new variants to R2
@@ -99,8 +99,43 @@ accepts writes from its own page.
 <Gallery photos={[{ src: 'greece/img-7770' }, { src: 'greece/img-7607', caption: '…' }]} />
 ```
 
-`caption` replaces the photo's description for that one use. When a pipeline update adds a new
-file type, `pnpm photos backfill` creates it for existing photos (then run `pnpm photos sync`).
+`caption` replaces the photo's description for that one use. All the photos in a post open in one
+lightbox, in reading order. When a pipeline update adds a new file type, `pnpm photos backfill`
+creates it for existing photos (then run `pnpm photos sync`).
+
+### Story posts
+
+`format: story` in a post's frontmatter makes a photo-led page: it opens with `coverPhoto` full
+screen (title and description over it), has no table of contents, and photos can be wider than
+the text.
+
+```mdx
+<Photo src="iceland/dscf-1434" size="full" />                    {/* size: text (default) | wide | full */}
+<Gallery tag="ice" size="wide" />
+<Row photos={['iceland/dscf-0820', 'iceland/dscf-0767']} />       {/* one row, same heights; wide by default */}
+
+<Side photo="iceland/dscf-1479" side="right">                     {/* photo beside text; wide by default */}
+
+Markdown text…
+
+</Side>
+
+<Cover photo="iceland/dscf-0558" position="50% 30%">              {/* full-screen chapter break */}
+
+## Ice
+
+</Cover>
+```
+
+In ordinary posts the same components work, but everything stays in the text column.
+
+### Album layouts
+
+An album's MDX body, if it has one, lays out the album page with the same components, plus
+`<AlbumGrid />` (the classic grid: the whole album, or `photos={['dscf-0503', …]}`). Without a body
+the page is the classic grid. In the album's frontmatter, `description` is the header text,
+the header is the cover photo full screen (`hero: banner` for a smaller banner instead), and
+`coverPosition: 50% 30%` picks which part of the cover stays in view when it's cropped.
 
 ## Deploying (one-time setup)
 

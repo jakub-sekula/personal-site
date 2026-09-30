@@ -217,6 +217,38 @@ picture > source {
   display: none;
 }
 
+/* Story posts (format: story): text in a reading column, photos wider than it
+   (.story-wide) or edge to edge (.story-full). Block layout rather than a grid, so
+   the prose margins between elements still collapse. Widths match lib/story.ts. */
+.story {
+  padding-inline: 1.5rem;
+}
+.story > * {
+  max-width: 42rem;
+  margin-inline: auto;
+}
+.story > .story-wide {
+  max-width: 72rem;
+}
+.story > .story-full {
+  max-width: none;
+  margin-inline: -1.5rem;
+}
+.story > .story-full [data-slide] {
+  border-radius: 0;
+}
+.story > .story-full .story-caption {
+  padding-inline: 1.5rem;
+}
+/* Inside a column that already has its own margins (album pages, next to the
+   photography sidebar): no page gutter, and "full" means the column's full width. */
+.story.story-inset {
+  padding-inline: 0;
+}
+.story.story-inset > .story-full {
+  margin-inline: 0;
+}
+
 /* Copy link: only for photos with a page (see Lightbox.astro). */
 .pswp:not(.pswp--has-link) .lightbox-copy-button {
   display: none;

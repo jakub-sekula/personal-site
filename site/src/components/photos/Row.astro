@@ -1,0 +1,23 @@
+---
+// Photos side by side in one row, all the same height (each as wide as its shape needs):
+//   <Row photos={['iceland/dscf-0820', 'iceland/dscf-0767']} />
+//   <Row photos={['iceland/dscf-0820', 'iceland/dscf-0767', 'iceland/dscf-0540']} caption="Day two" size="full" />
+// Entries can also be { src, caption, alt }, as for <Gallery>. Wider than the text by default.
+import { inline } from '../../lib/content';
+import type { StorySize } from '../../lib/story';
+import Gallery from './Gallery.astro';
+
+interface Props {
+  photos: (string | { src: string; caption?: string; alt?: string })[];
+  /** Markdown, under the row. */
+  caption?: string;
+  size?: StorySize;
+}
+
+const { photos, caption, size = 'wide' } = Astro.props;
+---
+
+<figure class:list={['not-prose my-8', `story-${size}`]}>
+  <Gallery photos={photos.map((p) => (typeof p === 'string' ? { src: p } : p))} size={size} singleRow />
+  {caption && <figcaption class="story-caption mt-2 text-center text-sm font-light opacity-75" set:html={inline(caption)} />}
+</figure>
