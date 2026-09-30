@@ -18,6 +18,8 @@ const sidebar = await Promise.all(
 
 const path = Astro.url.pathname.replace(/\/$/, '');
 const current = path.split('/').at(-1);
+// An album link is highlighted on the album and on its photos' pages.
+const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`);
 const navLink = 'font-headings relative text-sm font-light uppercase';
 ---
 
@@ -32,14 +34,14 @@ const navLink = 'font-headings relative text-sm font-light uppercase';
         sidebar.map(({ album, children }) => {
           const href = `/photography/${album.id}`;
           if (children.length === 0) {
-            return <a class:list={[navLink, path === href ? 'font-semibold' : 'opacity-75']} href={href}>{album.data.title}</a>;
+            return <a class:list={[navLink, isCurrent(href) ? 'font-semibold' : 'opacity-75']} href={href}>{album.data.title}</a>;
           }
           // Opens automatically on the parent album's own page (and stays open, see below).
           const expanded = current === album.id;
           return (
             <div class="flex flex-col" data-nested={album.id}>
               <div class="flex items-center">
-                <a class:list={[navLink, path === href ? 'font-semibold' : 'opacity-75']} href={href}>{album.data.title}</a>
+                <a class:list={[navLink, isCurrent(href) ? 'font-semibold' : 'opacity-75']} href={href}>{album.data.title}</a>
                 <button class="w-full p-1 pl-2" aria-expanded={expanded ? "true" : "false"} aria-label={`Show ${album.data.title} albums`}>
                   <span class:list={[expanded && 'hidden']} data-down><Icon name="chevron-down" size={14} /></span>
                   <span class:list={[!expanded && 'hidden']} data-up><Icon name="chevron-up" size={14} /></span>
@@ -52,7 +54,7 @@ const navLink = 'font-headings relative text-sm font-light uppercase';
               >
                 {children.map((child) => (
                   <a
-                    class:list={[navLink, 'ml-2 mt-3 text-xs', path === `/photography/${child.id}` ? 'font-semibold' : 'opacity-75']}
+                    class:list={[navLink, 'ml-2 mt-3 text-xs', isCurrent(`/photography/${child.id}`) ? 'font-semibold' : 'opacity-75']}
                     href={`/photography/${child.id}`}
                   >
                     {child.data.title}

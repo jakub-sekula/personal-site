@@ -258,7 +258,7 @@ for (const slug of albumSlugs) {
   }
   doc.get('photos').items.forEach((item, idx) => {
     const caption = imageLinks[idx]?.description;
-    if (caption && !/\.(jpe?g|png|webp)$/i.test(caption)) item.set('caption', caption);
+    if (caption && !/\.(jpe?g|png|webp)$/i.test(caption)) item.set('description', caption);
     if (starts.has(idx)) item.set('newSection', true);
   });
   await writeAlbum(slug, { doc, body: album.description ?? '' });

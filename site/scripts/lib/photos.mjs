@@ -3,6 +3,7 @@
 //
 // Layout on disk (mirrors the R2 bucket 1:1):
 //   public/photos/<album>/<photoId>/<width>.<avif|webp>
+//   public/photos/<album>/<photoId>/og.jpg      (link previews, at most OG_WIDTH wide)
 // Manifest (committed):
 //   src/data/photos/<album>.json  ->  { [photoId]: { w, h, widths, lqip, original } }
 
@@ -25,6 +26,11 @@ export const FORMATS = {
   webp: (img) => img.webp({ quality: 80 }),
 };
 export const IMAGE_EXT = /\.(jpe?g|png|webp|tiff?|avif|heic)$/i;
+
+// Link previews (og:image) are JPEG: WebP/AVIF previews aren't reliable across apps.
+// Must match OG_WIDTH in src/lib/photos.ts.
+export const OG_WIDTH = 1200;
+const encodeOg = (img) => img.jpeg({ quality: 82, mozjpeg: true });
 
 export function slugify(str) {
   return str
@@ -70,35 +76,52 @@ export async function processPhoto(input, album, manifest) {
   const dir = path.join(OUT_DIR, album, id);
 
   const existing = manifest[id];
-  if (existing && existing.widths.every((w) => Object.keys(FORMATS).every((f) => existsSync(path.join(dir, `${w}.${f}`))))) {
-    return { id, meta: existing, skipped: true };
+  let entry = existing;
+  if (!entry) {
+    const meta = await sharp(buf).metadata();
+    const rotated = (meta.orientation ?? 1) >= 5;
+    const w = rotated ? meta.height : meta.width;
+    const tiny = await sharp(buf).rotate().resize({ width: 20 }).webp({ quality: 40 }).toBuffer();
+    entry = {
+      w,
+      h: rotated ? meta.width : meta.height,
+      widths: variantWidths(w),
+      lqip: `data:image/webp;base64,${tiny.toString('base64')}`,
+      original: name,
+    };
   }
 
-  const meta = await sharp(buf).metadata();
-  const rotated = (meta.orientation ?? 1) >= 5;
-  const w = rotated ? meta.height : meta.width;
-  const h = rotated ? meta.width : meta.height;
-  const widths = variantWidths(w);
+  // Only encode what's missing on disk (e.g. a new output type added later).
+  const outputs = [
+    ...entry.widths.flatMap((width) =>
+      Object.entries(FORMATS).map(([ext, encode]) => ({
+        file: `${width}.${ext}`,
+        make: () => encode(sharp(buf).rotate().resize({ width })),
+      })),
+    ),
+    { file: 'og.jpg', make: () => encodeOg(sharp(buf).rotate().resize({ width: Math.min(OG_WIDTH, entry.w) })) },
+  ];
+  const missing = outputs.filter((o) => !existsSync(path.join(dir, o.file)));
+  if (existing && missing.length === 0) return { id, meta: existing, skipped: true };
 
   await mkdir(dir, { recursive: true });
-  await Promise.all(
-    widths.flatMap((width) =>
-      Object.entries(FORMATS).map(([ext, encode]) =>
-        encode(sharp(buf).rotate().resize({ width })).toFile(path.join(dir, `${width}.${ext}`)),
-      ),
-    ),
-  );
-
-  const tiny = await sharp(buf).rotate().resize({ width: 20 }).webp({ quality: 40 }).toBuffer();
-  const entry = {
-    w,
-    h,
-    widths,
-    lqip: `data:image/webp;base64,${tiny.toString('base64')}`,
-    original: name,
-  };
+  await Promise.all(missing.map((o) => o.make().toFile(path.join(dir, o.file))));
   manifest[id] = entry;
   return { id, meta: entry, skipped: false };
+}
+
+/**
+ * Create files that can be derived from a photo's existing variants, without
+ * the original (currently the og.jpg link preview). Returns what was made.
+ */
+export async function deriveMissing(album, id, entry) {
+  const dir = path.join(OUT_DIR, album, id);
+  const og = path.join(dir, 'og.jpg');
+  if (existsSync(og)) return [];
+  const source = path.join(dir, `${entry.widths.at(-1)}.webp`);
+  if (!existsSync(source)) throw new Error(`${album}/${id}: no ${path.basename(source)} to derive from`);
+  await encodeOg(sharp(source).resize({ width: Math.min(OG_WIDTH, entry.w) })).toFile(og);
+  return ['og.jpg'];
 }
 
 /** Process many files with a small concurrency limit (sharp is already multi-threaded). */

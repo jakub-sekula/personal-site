@@ -1,19 +1,22 @@
 ---
-// A single full-width photo with a caption, for use in MDX:
-//   <Photo src="greece/img-7785-f44e1767" caption="Chania harbour at dusk" />
-import { inline } from '../../lib/content';
+// A single full-width photo for use in MDX:
+//   <Photo src="greece/img-7785" />                  caption = the photo's title
+//   <Photo src="greece/img-7785" caption="Chania harbour at dusk" />
+import { findPhoto, inline } from '../../lib/content';
 import Gallery from './Gallery.astro';
 
 interface Props {
   src: string;
+  /** Markdown; defaults to the photo's title. */
   caption?: string;
   alt?: string;
 }
 
 const { src, caption, alt } = Astro.props;
+const text = caption ?? (await findPhoto(src))?.title;
 ---
 
 <figure class="not-prose my-8">
   <Gallery photos={[{ src, caption, alt }]} sizes="(min-width: 768px) 768px, 100vw" />
-  {caption && <figcaption class="mt-2 text-center text-sm font-light opacity-75" set:html={inline(caption)} />}
+  {text && <figcaption class="mt-2 text-center text-sm font-light opacity-75" set:html={inline(text)} />}
 </figure>

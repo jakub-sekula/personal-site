@@ -72,12 +72,23 @@ const albums = defineCollection({
     tags: z.array(z.string()).default([]),
     /** Child albums, for a grouping album like "Places". */
     albums: z.array(reference('albums')).default([]),
+    // Each photo gets its own page at /photography/<album>/<slug>; every field is optional.
     photos: z
       .array(
         z.object({
           src: photoRef,
-          caption: z.string().optional(),
+          title: z.string().optional(),
+          /** Markdown. Shown on the photo's page and in the lightbox. */
+          description: z.string().optional(),
+          /** Photo tags, listed at /photography/tags/<tag>. */
+          tags: z.array(z.string()).default([]),
+          /** For screen readers; falls back to the title, then the album title. */
           alt: z.string().optional(),
+          /** Address of the photo's page. Defaults to its file name (e.g. dscf-1434). */
+          slug: z
+            .string()
+            .regex(/^[a-z0-9-]+$/)
+            .optional(),
           /** Start a new grid block at this photo (Strapi albums were split into sections). */
           newSection: z.boolean().optional(),
         }),

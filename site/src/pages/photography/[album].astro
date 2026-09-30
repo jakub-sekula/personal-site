@@ -4,10 +4,9 @@ import type { GetStaticPaths } from 'astro';
 import Photography from '../../layouts/Photography.astro';
 import Icon from '../../components/Icon.astro';
 import Picture from '../../components/photos/Picture.astro';
-import GalleryLightbox from '../../components/photos/GalleryLightbox';
-import { getAlbums, getChildAlbums } from '../../lib/content';
+import PhotoGrid from '../../components/photos/PhotoGrid.astro';
+import { albumName, albumPhotos, getAlbums, getChildAlbums } from '../../lib/content';
 import { getPhoto } from '../../lib/photos';
-import { toSlides } from '../../lib/lightbox';
 
 export const getStaticPaths = (async () => {
   const albums = await getAlbums();
@@ -15,21 +14,18 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths;
 
 const { album } = Astro.props;
-const { title, photos } = album.data;
+const { title } = album.data;
 const description = album.body?.trim() ?? '';
 const children = await getChildAlbums(album);
 const cover = getPhoto(album.data.cover);
-
-// Strapi albums were made of sections; `newSection` on a photo starts the next one.
-const sections: { photo: (typeof photos)[number]; index: number }[][] = [];
-photos.forEach((photo, index) => {
-  if (index === 0 || photo.newSection) sections.push([]);
-  sections.at(-1)!.push({ photo, index });
-});
-const galleryId = `gallery-${album.id}`;
+const photos = albumPhotos(album);
 ---
 
-<Photography title={`${title.replace(/^\p{Regional_Indicator}{2}\s*/u, '')} - Jakub Sekula`} description={description || title} image={cover.url(1280)}>
+<Photography title={`${albumName(album)} - Jakub Sekula`} description={description || title}
+  image={cover.og.url}
+  imageWidth={cover.og.width}
+  imageHeight={cover.og.height}
+>
   <section class="relative flex h-screen max-h-[400px] max-w-[1920px] items-center justify-center overflow-hidden rounded-xs">
     <div class="absolute inset-0 z-10 h-full bg-linear-to-tr from-darkbg/90"></div>
     <Picture src={album.data.cover} alt={title} sizes="(min-width: 1350px) 1080px, 100vw" eager class="absolute inset-0 z-0 mx-auto h-full w-full object-cover" />
@@ -72,47 +68,5 @@ const galleryId = `gallery-${album.id}`;
     )
   }
 
-  <div id={galleryId} class="contents">
-    {
-      sections.map((items) => (
-        <section class="col-span-full grid w-full grid-cols-12 pt-4">
-          <div class="col-span-full mx-auto grid w-full grid-cols-12 gap-4">
-            {items.map(({ photo, index }) => {
-              const { w, h } = getPhoto(photo.src);
-              const alt = photo.alt ?? photo.caption ?? title;
-              return (
-                <div
-                  class="group relative z-0 aspect-3/2 overflow-hidden md:rounded-xs bg-neutral-100 col-span-6 lg:col-span-4"
-                  data-slide={index}
-                  role="button"
-                  tabindex="0"
-                  aria-label={`Open photo ${index + 1}`}
-                >
-                  {h >= w && (
-                    <Picture
-                      src={photo.src}
-                      alt=""
-                      sizes="(min-width: 1024px) 25vw, 50vw"
-                      eager={index < 6}
-                      placeholder={false}
-                      class="absolute z-20 h-full w-full scale-[110%] object-cover blur-md  transition-all duration-500 ease-out group-hover:scale-[112.5%]"
-                    />
-                  )}
-                  <Picture
-                    src={photo.src}
-                    alt={alt}
-                    sizes="(min-width: 1024px) 25vw, 50vw"
-                    eager={index < 6}
-                    placeholder={w >= h}
-                    class:list={['absolute z-50 h-full w-full transition-all duration-500 ease-out group-hover:scale-[102.5%]', w >= h ? 'object-cover' : 'object-contain']}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ))
-    }
-  </div>
-  {photos.length > 0 && <GalleryLightbox client:idle target={galleryId} slides={toSlides(photos)} />}
+  <PhotoGrid id={`gallery-${album.id}`} photos={photos} />
 </Photography>

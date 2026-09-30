@@ -1,0 +1,132 @@
+---
+// A page per photo: /photography/<album>/<slug>. What a shared link or search
+// result lands on (with the photo as its link preview); browsing an album
+// shows the same address in the lightbox instead.
+import type { GetStaticPaths } from 'astro';
+import Photography from '../../../layouts/Photography.astro';
+import Icon from '../../../components/Icon.astro';
+import Tag from '../../../components/common/Tag.astro';
+import Picture from '../../../components/photos/Picture.astro';
+import { albumName, albumPhotos, getAlbums, photoPageTitle, plainText, tagSlug } from '../../../lib/content';
+
+export const getStaticPaths = (async () => {
+  const albums = await getAlbums();
+  return albums.flatMap((album) => {
+    const photos = albumPhotos(album);
+    return photos.map((item) => ({
+      params: { album: album.id, photo: item.slug },
+      props: { item, prev: photos[item.index - 1], next: photos[item.index + 1], total: photos.length },
+    }));
+  });
+}) satisfies GetStaticPaths;
+
+const { item, prev, next, total } = Astro.props;
+const { album, photo, title, descriptionHtml, description, tags, alt, index } = item;
+const albumHref = `/photography/${album.id}`;
+const metaDescription = description
+  ? plainText(description)
+  : album.body?.trim() || `Photo ${index + 1} of ${total} from ${albumName(album)}.`;
+---
+
+<Photography
+  title={photoPageTitle(item)}
+  description={metaDescription}
+  image={photo.og.url}
+  imageWidth={photo.og.width}
+  imageHeight={photo.og.height}
+>
+  <article class="flex flex-col gap-6 pb-12">
+    <nav class="flex items-center justify-between gap-4 text-sm font-light" aria-label="Album">
+      <a href={albumHref} class="flex items-center gap-1 hover:underline">
+        <Icon name="chevron-left" size={16} />
+        {album.data.title}
+      </a>
+      <span class="tabular-nums opacity-75">{index + 1} / {total}</span>
+    </nav>
+
+    <figure class="group relative flex items-center justify-center overflow-hidden rounded-xs bg-black/5 dark:bg-black/30">
+      <Picture
+        src={photo.src}
+        alt={alt}
+        sizes="(min-width: 1350px) 1080px, (min-width: 768px) 80vw, 100vw"
+        eager
+        class="h-auto max-h-[calc(100vh-12rem)] w-auto max-w-full object-contain"
+      />
+      {
+        prev && (
+          <a
+            href={prev.href}
+            rel="prev"
+            aria-label="Previous photo"
+            class="absolute inset-y-0 left-0 hidden w-1/4 items-center justify-start p-4 text-white opacity-0 transition-opacity duration-300 hover:opacity-100 focus-visible:opacity-100 md:flex"
+          >
+            <span class="rounded-full bg-black/40 p-2 backdrop-blur-xs"><Icon name="chevron-left" size={24} /></span>
+          </a>
+        )
+      }
+      {
+        next && (
+          <a
+            href={next.href}
+            rel="next"
+            aria-label="Next photo"
+            class="absolute inset-y-0 right-0 hidden w-1/4 items-center justify-end p-4 text-white opacity-0 transition-opacity duration-300 hover:opacity-100 focus-visible:opacity-100 md:flex"
+          >
+            <span class="rounded-full bg-black/40 p-2 backdrop-blur-xs"><Icon name="chevron-right" size={24} /></span>
+          </a>
+        )
+      }
+    </figure>
+
+    <div class="mx-auto flex w-full max-w-[75ch] flex-col gap-4">
+      {
+        title ? (
+          <h1 class="font-heading text-3xl font-semibold tracking-tight md:text-4xl">{title}</h1>
+        ) : (
+          <h1 class="sr-only">{`Photo ${index + 1} of ${total} from ${albumName(album)}`}</h1>
+        )
+      }
+      {descriptionHtml && <div class="prose max-w-none font-light dark:prose-invert" set:html={descriptionHtml} />}
+      {
+        tags.length > 0 && (
+          <ul class="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <li>
+                <Tag href={`/photography/tags/${tagSlug(tag)}`} title={tag} />
+              </li>
+            ))}
+          </ul>
+        )
+      }
+      <nav class="flex justify-between gap-4 pt-2 text-sm font-light" aria-label="Photos">
+        {
+          prev ? (
+            <a href={prev.href} class="flex items-center gap-1 hover:underline">
+              <Icon name="chevron-left" size={16} /> Previous
+            </a>
+          ) : (
+            <span />
+          )
+        }
+        {
+          next && (
+            <a href={next.href} class="flex items-center gap-1 hover:underline">
+              Next <Icon name="chevron-right" size={16} />
+            </a>
+          )
+        }
+      </nav>
+    </div>
+  </article>
+</Photography>
+
+<script>
+  // Arrow keys move through the album, like the lightbox.
+  document.addEventListener('keydown', (e) => {
+    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable]')) return;
+    const rel = { ArrowLeft: 'prev', ArrowRight: 'next' }[e.key];
+    const link = rel && document.querySelector<HTMLAnchorElement>(`a[rel="${rel}"]`);
+    if (link) location.href = link.href;
+  });
+</script>

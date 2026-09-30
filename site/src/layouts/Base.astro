@@ -5,12 +5,15 @@ import '../styles/global.css';
 interface Props {
   title?: string;
   description?: string;
+  /** Link-preview image (og:image); relative URLs are made absolute. */
   image?: string;
+  imageWidth?: number;
+  imageHeight?: number;
   /** Ask search engines not to index this page. */
   noindex?: boolean;
 }
 
-const { title = 'Jakub Sekula', description = 'Web developer, mechanical engineer, and photography enthusiast.', image, noindex = false } = Astro.props;
+const { title = 'Jakub Sekula', description = 'Web developer, mechanical engineer, and photography enthusiast.', image, imageWidth, imageHeight, noindex = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
 
@@ -27,7 +30,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
+    <meta property="og:type" content="website" />
     {image && <meta property="og:image" content={new URL(image, Astro.site)} />}
+    {image && imageWidth && <meta property="og:image:width" content={String(imageWidth)} />}
+    {image && imageHeight && <meta property="og:image:height" content={String(imageHeight)} />}
+    <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
     <script is:inline>
       // Same behaviour as next-themes on the old site: dark by default, choice kept in localStorage("theme").
       (() => {

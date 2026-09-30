@@ -1,8 +1,11 @@
 ---
 // Justified-rows gallery for use inside posts, opening the same lightbox as album pages.
 //   <Gallery album="greece" />                       every photo in an album
-//   <Gallery photos={[{ src: 'greece/img-7785-f44e1767', caption: '…' }]} />
+//   <Gallery photos={[{ src: 'greece/img-7785' }, { src: 'greece/img-7607', caption: '…' }]} />
+// Photos listed in an album link to their page and bring their title and
+// description; `caption` (Markdown) replaces the description here.
 import { getEntry } from 'astro:content';
+import { albumPhotos, findPhoto, inline, photoPageTitle } from '../../lib/content';
 import { getPhoto } from '../../lib/photos';
 import { toSlides } from '../../lib/lightbox';
 import Picture from './Picture.astro';
@@ -18,47 +21,56 @@ interface Props {
 }
 
 const { album, rowHeight = 16, sizes } = Astro.props;
-let { photos } = Astro.props;
-let fallbackAlt = 'Photo';
+let refs = Astro.props.photos;
 
 if (album) {
   const entry = await getEntry('albums', album);
   if (!entry) throw new Error(`<Gallery album="${album}">: no such album`);
-  photos ??= entry.data.photos;
-  fallbackAlt = entry.data.title;
+  refs ??= albumPhotos(entry).map((p) => ({ src: p.photo.src }));
 }
-if (!photos?.length) throw new Error('<Gallery>: pass `album` or a non-empty `photos` list');
+if (!refs?.length) throw new Error('<Gallery>: pass `album` or a non-empty `photos` list');
 
-const items = photos.map((p) => {
-  const { w, h } = getPhoto(p.src);
-  const ratio = w / h;
-  return {
-    ...p,
-    ratio,
-    alt: p.alt ?? p.caption ?? fallbackAlt,
-    // Rendered width ≈ ratio × row height; generous so 2x screens stay sharp.
-    sizes: sizes ?? `(min-width: 640px) ${Math.ceil(ratio * rowHeight * 16 * 1.25)}px, 100vw`,
-  };
-});
+const items = await Promise.all(
+  refs.map(async (ref) => {
+    const listed = await findPhoto(ref.src);
+    const photo = listed?.photo ?? getPhoto(ref.src);
+    const ratio = photo.w / photo.h;
+    return {
+      photo,
+      ratio,
+      href: listed?.href,
+      title: listed?.title,
+      descriptionHtml: ref.caption ? inline(ref.caption) : listed?.descriptionHtml,
+      alt: ref.alt ?? listed?.alt ?? ref.caption?.replace(/[*_`[\]]|\(.*?\)/g, '') ?? 'Photo',
+      pageTitle: listed && photoPageTitle(listed),
+      // Rendered width ≈ ratio × row height; generous so 2x screens stay sharp.
+      sizes: sizes ?? `(min-width: 640px) ${Math.ceil(ratio * rowHeight * 16 * 1.25)}px, 100vw`,
+    };
+  }),
+);
 const id = `gallery-${Math.random().toString(36).slice(2, 10)}`;
+const tileClass = 'group relative block cursor-pointer overflow-hidden rounded-xs';
 ---
 
 <div id={id} class="not-prose flex flex-wrap gap-2">
   {
-    items.map((item, i) => (
-      <div
-        data-slide={i}
-        role="button"
-        tabindex="0"
-        aria-label={`Open photo ${i + 1}`}
-        class="group relative block cursor-pointer overflow-hidden rounded-xs"
-        style={`flex: ${item.ratio} 1 ${item.ratio * rowHeight}rem; aspect-ratio: ${item.ratio}`}
-      >
-        <Picture src={item.src} alt={item.alt} sizes={item.sizes} class="size-full object-cover transition duration-500 group-hover:scale-[1.03]" />
-      </div>
-    ))
+    items.map((item, i) => {
+      const style = `flex: ${item.ratio} 1 ${item.ratio * rowHeight}rem; aspect-ratio: ${item.ratio}`;
+      const picture = (
+        <Picture src={item.photo.src} alt={item.alt} sizes={item.sizes} class="size-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+      );
+      return item.href ? (
+        <a href={item.href} data-slide={i} class={tileClass} style={style}>
+          {picture}
+        </a>
+      ) : (
+        <div data-slide={i} role="button" tabindex="0" aria-label={`Open photo ${i + 1}`} class={tileClass} style={style}>
+          {picture}
+        </div>
+      );
+    })
   }
   {/* Soaks up leftover space so the last row isn't stretched (a lone photo should fill the width). */}
   {items.length > 1 && <span aria-hidden="true" style="flex-grow: 1000000000" />}
 </div>
-<GalleryLightbox client:visible target={id} slides={toSlides(photos)} />
+<GalleryLightbox client:visible target={id} slides={toSlides(items)} />

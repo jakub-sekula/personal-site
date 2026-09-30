@@ -1,0 +1,24 @@
+---
+// All photo tags (separate from the project/post tags at /tags).
+import Photography from '../../../layouts/Photography.astro';
+import Tag from '../../../components/common/Tag.astro';
+import { getPhotoTags } from '../../../lib/content';
+
+const tags = [...(await getPhotoTags())].sort(([, a], [, b]) => a.name.localeCompare(b.name));
+---
+
+<Photography title="Photo tags - Jakub Sekula Photography" description="Browse photos by tag.">
+  <header class="pt-4 pb-6 md:pt-0">
+    <h1 class="font-heading text-3xl font-bold uppercase tracking-tight md:text-5xl">Tags</h1>
+  </header>
+  {tags.length === 0 && <p class="font-light opacity-75">No photos are tagged yet.</p>}
+  <ul class="flex flex-wrap gap-3">
+    {
+      tags.map(([slug, tag]) => (
+        <li>
+          <Tag href={`/photography/tags/${slug}`} title={`${tag.name} (${tag.photos.length})`} />
+        </li>
+      ))
+    }
+  </ul>
+</Photography>

@@ -38,29 +38,56 @@ rendering a hole. Anything with `draft: true` shows in `pnpm dev` only.
 ## Photos
 
 Originals never go in git. `pnpm photos add` resizes each one into AVIF + WebP at
-640/1280/1920/2560px (EXIF and GPS stripped), writes them to `public/photos/` (git-ignored),
-records dimensions and a blur placeholder in `src/data/photos/<album>.json`, and appends
-the photos to the album file.
+640/1280/1920/2560px plus a 1200px JPEG for link previews (EXIF and GPS stripped), writes
+them to `public/photos/` (git-ignored), records dimensions and a blur placeholder in
+`src/data/photos/<album>.json`, and appends the photos to the album file.
 
 ```bash
 # New album (or add more photos to an existing one)
 pnpm photos add portugal ~/Exports/portugal --title "🇵🇹 Portugal" --parent places
 
-# Edit src/content/albums/portugal.mdx: reorder, add captions, pick the cover, write an intro.
+# Edit src/content/albums/portugal.mdx: reorder, add titles/descriptions/tags, pick the cover, write an intro.
 # Without --parent, add it to src/content/photography.yaml to list it on /photography.
 
 pnpm photos sync   # upload new variants to R2
 git add src && git commit -m "Add Portugal album" && git push   # the Worker rebuilds and deploys
 ```
 
-Photo ids include a content hash, so a re-edited export gets new URLs (safe to cache forever).
-Reference any photo from any post:
+Photo ids include a content hash, so a re-edited export gets new file URLs (safe to cache
+forever). Refer to a photo by its short name (`greece/img-7785`) unless two in an album share one.
+
+### Titles, descriptions and tags
+
+Every field is optional and lives with the photo in its album file:
+
+```yaml
+photos:
+  - src: iceland/dscf-1434
+    title: Búðakirkja
+    description: |          # Markdown
+      The black church at Búðir, built in 1703.
+    tags: [churches, fog]
+    alt: A small black church on a grassy plain  # defaults to the title
+    slug: budakirkja       # page address; defaults to the file name (dscf-1434)
+```
+
+- Every photo in an album has a page at `/photography/<album>/<slug>` with its title,
+  description, tags and prev/next, and uses the photo as its link preview.
+- Clicking a photo in a grid opens the lightbox instead; the address bar shows the photo's
+  page while it's open, and back closes it.
+- Tags list at `/photography/tags/<tag>` (separate from the project/post tags at `/tags`).
+
+### In posts
 
 ```mdx
-<Photo src="greece/img-7785-f44e1767" caption="Markdown *works* here" />
+<Photo src="greece/img-7785" />                                  {/* caption = the photo's title */}
+<Photo src="greece/img-7785" caption="Markdown *works* here" />
 <Gallery album="greece" />
-<Gallery photos={[{ src: 'greece/img-7770-c1a1fc43' }, { src: 'greece/img-7607-667fed43', caption: '…' }]} />
+<Gallery photos={[{ src: 'greece/img-7770' }, { src: 'greece/img-7607', caption: '…' }]} />
 ```
+
+`caption` replaces the photo's description for that one use. When a pipeline update adds a new
+file type, `pnpm photos backfill` creates it for existing photos (then run `pnpm photos sync`).
 
 ## Deploying (one-time setup)
 

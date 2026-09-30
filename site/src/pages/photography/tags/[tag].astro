@@ -1,0 +1,35 @@
+---
+// Every photo with a given tag, across albums.
+import type { GetStaticPaths } from 'astro';
+import Photography from '../../../layouts/Photography.astro';
+import Icon from '../../../components/Icon.astro';
+import PhotoGrid from '../../../components/photos/PhotoGrid.astro';
+import { getPhotoTags } from '../../../lib/content';
+
+export const getStaticPaths = (async () => {
+  const tags = await getPhotoTags();
+  return [...tags].map(([slug, tag]) => ({ params: { tag: slug }, props: tag }));
+}) satisfies GetStaticPaths;
+
+const { name, photos } = Astro.props;
+// Album section breaks don't mean anything across albums.
+const items = photos.map((p) => ({ ...p, newSection: false }));
+const [first] = photos;
+---
+
+<Photography
+  title={`${name} - Jakub Sekula Photography`}
+  description={`Photos tagged “${name}”.`}
+  image={first.photo.og.url}
+  imageWidth={first.photo.og.width}
+  imageHeight={first.photo.og.height}
+>
+  <header class="flex flex-col gap-2 pt-4 md:pt-0">
+    <a href="/photography/tags" class="flex items-center gap-1 text-sm font-light hover:underline">
+      <Icon name="chevron-left" size={16} /> All tags
+    </a>
+    <h1 class="font-heading text-3xl font-bold uppercase tracking-tight md:text-5xl">{name}</h1>
+    <p class="text-sm font-light opacity-75">{photos.length} {photos.length === 1 ? 'photo' : 'photos'}</p>
+  </header>
+  <PhotoGrid id="gallery-tag" photos={items} />
+</Photography>

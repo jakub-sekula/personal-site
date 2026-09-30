@@ -217,6 +217,14 @@ picture > source {
   display: none;
 }
 
+/* Photo descriptions (Markdown) in the lightbox caption. */
+.lightbox-description a {
+  text-decoration: underline;
+}
+.lightbox-description p + p {
+  margin-top: 0.5em;
+}
+
 /* Old code blocks came from react-syntax-highlighter; Shiki renders them at build time. */
 .prose pre.astro-code {
   margin: 0;

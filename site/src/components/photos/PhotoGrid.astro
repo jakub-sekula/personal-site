@@ -1,0 +1,69 @@
+---
+// The album photo grid (ported from the old LightboxWrapper): 3:2 tiles, portrait
+// photos shown whole over a blurred copy. Each tile links to the photo's page;
+// clicking opens the lightbox instead, with the address bar following along.
+import type { AlbumPhoto } from '../../lib/content';
+import { photoPageTitle } from '../../lib/content';
+import { toSlides } from '../../lib/lightbox';
+import Picture from './Picture.astro';
+import GalleryLightbox from './GalleryLightbox';
+
+interface Props {
+  id: string;
+  photos: AlbumPhoto[];
+}
+
+const { id, photos } = Astro.props;
+
+// Strapi albums were made of sections; `newSection` on a photo starts the next grid block.
+const sections: { item: AlbumPhoto; index: number }[][] = [];
+photos.forEach((item, index) => {
+  if (index === 0 || item.newSection) sections.push([]);
+  sections.at(-1)!.push({ item, index });
+});
+const slides = toSlides(photos.map((p) => ({ ...p, pageTitle: photoPageTitle(p) })));
+---
+
+<div id={id} class="contents">
+  {
+    sections.map((items) => (
+      <section class="col-span-full grid w-full grid-cols-12 pt-4">
+        <div class="col-span-full mx-auto grid w-full grid-cols-12 gap-4">
+          {items.map(({ item, index }) => {
+            const { w, h } = item.photo;
+            return (
+              <a
+                href={item.href}
+                class="group relative z-0 aspect-3/2 overflow-hidden md:rounded-xs bg-neutral-100 col-span-6 lg:col-span-4"
+                data-slide={index}
+              >
+                {h >= w && (
+                  <Picture
+                    src={item.photo.src}
+                    alt=""
+                    sizes="(min-width: 1024px) 25vw, 50vw"
+                    eager={index < 6}
+                    placeholder={false}
+                    class="absolute z-20 h-full w-full scale-[110%] object-cover blur-md  transition-all duration-500 ease-out group-hover:scale-[112.5%]"
+                  />
+                )}
+                <Picture
+                  src={item.photo.src}
+                  alt={item.alt}
+                  sizes="(min-width: 1024px) 25vw, 50vw"
+                  eager={index < 6}
+                  placeholder={w >= h}
+                  class:list={[
+                    'absolute z-50 h-full w-full transition-all duration-500 ease-out group-hover:scale-[102.5%]',
+                    w >= h ? 'object-cover' : 'object-contain',
+                  ]}
+                />
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    ))
+  }
+</div>
+{photos.length > 0 && <GalleryLightbox client:idle target={id} slides={slides} />}

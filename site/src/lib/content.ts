@@ -1,5 +1,6 @@
 import { getCollection, getEntries, type CollectionEntry } from 'astro:content';
 import { marked } from 'marked';
+import { getPhoto, type Photo } from './photos';
 
 // Drafts show up in `astro dev` so you can preview them, never in a build.
 export const isVisible = ({ data }: { data: { draft: boolean } }) => import.meta.env.DEV || !data.draft;
@@ -30,6 +31,86 @@ export async function getChildAlbums(album: Album) {
   return (await getEntries(album.data.albums)).filter(isVisible);
 }
 
+/** Album title without a leading flag emoji ("🇮🇸 Iceland" → "Iceland"), for page titles. */
+export const albumName = (album: Album) => album.data.title.replace(/^\p{Regional_Indicator}{2}\s*/u, '');
+
+// --- Photos ------------------------------------------------------------------
+// A photo's files come from its manifest (src/lib/photos.ts); its title,
+// description and tags from its entry in the album file. Every photo listed in
+// an album gets a page at /photography/<album>/<slug>.
+
+export interface AlbumPhoto {
+  album: Album;
+  /** Position in the album, from 0. */
+  index: number;
+  photo: Photo;
+  slug: string;
+  href: string;
+  title?: string;
+  /** Markdown source and rendered HTML. */
+  description?: string;
+  descriptionHtml?: string;
+  tags: string[];
+  alt: string;
+  newSection: boolean;
+}
+
+export function albumPhotos(album: Album): AlbumPhoto[] {
+  const entries = album.data.photos.map((entry) => ({ entry, photo: getPhoto(entry.src) }));
+  // A photo's page is named after its file; the hash is only added if two files share a name.
+  const nameCount = new Map<string, number>();
+  entries.forEach(({ photo }) => nameCount.set(photo.name, (nameCount.get(photo.name) ?? 0) + 1));
+  const taken = new Set<string>();
+
+  return entries.map(({ entry, photo }, index) => {
+    const slug = entry.slug ?? (nameCount.get(photo.name)! > 1 ? photo.id : photo.name);
+    if (taken.has(slug)) {
+      throw new Error(`Two photos in album "${album.id}" would both live at /photography/${album.id}/${slug}. Give one a \`slug\`.`);
+    }
+    taken.add(slug);
+    return {
+      album,
+      index,
+      photo,
+      slug,
+      href: `/photography/${album.id}/${slug}`,
+      title: entry.title,
+      description: entry.description,
+      descriptionHtml: entry.description ? block(entry.description) : undefined,
+      tags: entry.tags,
+      alt: entry.alt ?? entry.title ?? albumName(album),
+      newSection: !!entry.newSection,
+    };
+  });
+}
+
+/** Tab title for a photo's page: its title, or "<Album> <n>" if it has none. */
+export const photoPageTitle = (p: AlbumPhoto) => `${p.title ?? `${albumName(p.album)} ${p.index + 1}`} - Jakub Sekula`;
+
+/** Every photo in every visible album. */
+export async function getAllPhotos() {
+  return (await getAlbums()).flatMap(albumPhotos);
+}
+
+/** The album entry for a photo reference, if the photo is listed in an album. */
+export async function findPhoto(src: string) {
+  const canonical = getPhoto(src).src;
+  return (await getAllPhotos()).find((p) => p.photo.src === canonical);
+}
+
+/** Every photo tag, with its photos. Kept separate from project/post tags. */
+export async function getPhotoTags() {
+  const tags = new Map<string, { name: string; photos: AlbumPhoto[] }>();
+  for (const photo of await getAllPhotos()) {
+    for (const name of photo.tags) {
+      const slug = tagSlug(name);
+      if (!tags.has(slug)) tags.set(slug, { name, photos: [] });
+      tags.get(slug)!.photos.push(photo);
+    }
+  }
+  return tags;
+}
+
 // --- Tags --------------------------------------------------------------------
 
 export function tagSlug(tag: string) {
@@ -55,4 +136,18 @@ export async function getTags() {
 /** Render a short Markdown string (caption) to inline HTML. Content is our own. */
 export function inline(md: string) {
   return marked.parseInline(md, { async: false });
+}
+
+/** Render Markdown (a few paragraphs) to HTML. Content is our own. */
+export function block(md: string) {
+  return marked.parse(md, { async: false });
+}
+
+/** Markdown as plain text, for meta descriptions. */
+export function plainText(md: string) {
+  return block(md)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&(amp|lt|gt|quot|#39);/g, (_, e) => ({ amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" })[e as string]!)
+    .replace(/\s+/g, ' ')
+    .trim();
 }

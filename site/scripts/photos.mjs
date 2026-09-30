@@ -6,6 +6,10 @@
 //     src/content/albums/<album>.mdx (created if missing). --parent also lists
 //     the album inside another one (e.g. a country inside Places).
 //
+//   pnpm photos backfill
+//     Create any files that newer versions of the pipeline add (e.g. og.jpg link
+//     previews) for photos processed before, from their existing variants.
+//
 //   pnpm photos sync [--dry-run]
 //     Upload anything in public/photos/ that isn't in the R2 bucket yet.
 //     Needs R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET (see .env.example).
@@ -15,11 +19,14 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import {
   IMAGE_EXT,
+  MANIFEST_DIR,
   OUT_DIR,
   appendPhotos,
+  deriveMissing,
   newAlbumDoc,
   processPhotos,
   readAlbum,
+  readManifest,
   slugify,
   writeAlbum,
 } from './lib/photos.mjs';
@@ -36,9 +43,10 @@ const { positionals, values } = parseArgs({
 const [command, ...rest] = positionals;
 
 if (command === 'add') await add(rest);
+else if (command === 'backfill') await backfill();
 else if (command === 'sync') await sync();
 else {
-  console.error('Usage: pnpm photos add <album> <folder-or-files...> [--title ...] [--parent ...]\n       pnpm photos sync [--dry-run]');
+  console.error('Usage: pnpm photos add <album> <folder-or-files...> [--title ...] [--parent ...]\n       pnpm photos backfill\n       pnpm photos sync [--dry-run]');
   process.exit(1);
 }
 
@@ -88,7 +96,18 @@ async function add([albumArg, ...inputs]) {
     console.log(`Listed it in src/content/albums/${values.parent}.mdx.`);
   }
 
-  console.log('Next: add captions if you like, then `pnpm photos sync` and commit.');
+  console.log('Next: add titles, descriptions and tags if you like, then `pnpm photos sync` and commit.');
+}
+
+async function backfill() {
+  let made = 0;
+  for (const file of (await readdir(MANIFEST_DIR)).filter((f) => f.endsWith('.json'))) {
+    const album = path.basename(file, '.json');
+    for (const [id, entry] of Object.entries(await readManifest(album))) {
+      made += (await deriveMissing(album, id, entry)).length;
+    }
+  }
+  console.log(`Created ${made} file(s). Run \`pnpm photos sync\` to upload them.`);
 }
 
 async function sync() {
@@ -116,7 +135,7 @@ async function sync() {
   } while (token);
 
   const local = (await readdir(OUT_DIR, { recursive: true, withFileTypes: true }))
-    .filter((d) => d.isFile() && /\.(avif|webp)$/.test(d.name))
+    .filter((d) => d.isFile() && /\.(avif|webp|jpg)$/.test(d.name))
     .map((d) => path.relative(OUT_DIR, path.join(d.parentPath, d.name)).split(path.sep).join('/'));
   const pending = local.filter((key) => !remote.has(key));
 
@@ -133,7 +152,7 @@ async function sync() {
             Bucket: R2_BUCKET,
             Key: key,
             Body: await readFile(path.join(OUT_DIR, key)),
-            ContentType: key.endsWith('.avif') ? 'image/avif' : 'image/webp',
+            ContentType: { avif: 'image/avif', webp: 'image/webp', jpg: 'image/jpeg' }[key.split('.').pop()],
             // Photo ids include a content hash, so a URL never changes content.
             CacheControl: 'public, max-age=31536000, immutable',
           }),
