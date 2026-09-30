@@ -4,6 +4,7 @@ import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
+import photoEditor from './integrations/photo-editor/index.mjs';
 
 // Photos are served from R2 in production (public/photos is local-only), so a
 // Cloudflare build (Workers Builds or Pages) without the R2 URL must not ship.
@@ -22,6 +23,8 @@ export default defineConfig({
     // The CV is noindex (see src/pages/cv.astro and public/_headers), so keep it out of the sitemap too.
     sitemap({ filter: (page) => !/\/cv\/?$/.test(page) }),
     react(),
+    // Local photo editor at /dev/photos, only in `astro dev`.
+    photoEditor(),
   ],
   vite: {
     plugins: [tailwindcss()],

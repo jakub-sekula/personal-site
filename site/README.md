@@ -77,6 +77,19 @@ photos:
   page while it's open, and back closes it.
 - Tags list at `/photography/tags/<tag>` (separate from the project/post tags at `/tags`).
 
+### Photo editor (local)
+
+While `pnpm dev` runs, **http://localhost:4321/dev/photos** lists every album's photos:
+
+- Fill in title, description, tags, alt text and address; each change saves into the album
+  file when you leave the field (formatting and comments are kept). Review with `git diff`.
+- Copy a photo's `<Photo>` snippet or name; click thumbnails to select several (in order) and
+  copy a `<Gallery>` snippet for a post.
+- Set an album's cover, filter by album, search by name/title/tag, or show only untitled photos.
+
+It's added by `integrations/photo-editor/` only in dev: it isn't part of the build, and it only
+accepts writes from its own page.
+
 ### In posts
 
 ```mdx
