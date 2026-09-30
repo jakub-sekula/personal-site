@@ -1,0 +1,24 @@
+---
+// Port of components/common/ToolCard.tsx. The old one picked the icon from the
+// theme in JS; here both are rendered and CSS shows the right one.
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  tool: CollectionEntry<'tools'>;
+  class?: string;
+}
+
+const { tool, class: className } = Astro.props;
+const { name, icon, iconDark, preferLight } = tool.data;
+const light = icon ?? iconDark;
+const dark = preferLight ? light : (iconDark ?? icon);
+---
+
+<div
+  class={`rounded-card flex flex-col items-center justify-center gap-4
+	 px-3 py-6 font-bold dark:bg-white/[2%] backdrop-blur-lg ${className ?? ''}`}
+>
+  {light && <img src={light.src} alt={name} width="48" height="48" class="w-16 dark:hidden" />}
+  {dark && <img src={dark.src} alt={name} width="48" height="48" class="hidden w-16 dark:block" />}
+  <span class="text-sm">{name}</span>
+</div>

@@ -1,0 +1,29 @@
+---
+// Port of the old app/page.jsx. Content comes from src/content/home.yaml.
+import { getEntries, getEntry } from 'astro:content';
+import Page from '../layouts/Page.astro';
+import Hero from '../components/home/Hero.astro';
+import AboutSection from '../components/home/AboutSection.astro';
+import ProjectsSection from '../components/home/ProjectsSection.astro';
+import SkillsSection from '../components/home/SkillsSection.astro';
+import PhotographySection from '../components/home/PhotographySection.astro';
+import { isVisible } from '../lib/content';
+
+const home = (await getEntry('home', 'home'))!.data;
+const projectGroups = await Promise.all(
+  home.projects.map(async (g) => ({ title: g.title, projects: (await getEntries(g.projects)).filter(isVisible) })),
+);
+const albums = (await getEntries(home.photography)).filter(isVisible);
+---
+
+<Page title="Jakub Sekula" description="Web developer, mechanical engineer, and photography enthusiast.">
+  <Hero home={home} />
+  <AboutSection bio={home.about} />
+  {
+    projectGroups
+      .filter((g) => g.projects.length > 0)
+      .map((group) => <ProjectsSection title={group.title} projects={group.projects} />)
+  }
+  {home.skills.length > 0 && <SkillsSection skills={home.skills} />}
+  {albums.length > 0 && <PhotographySection albums={albums} />}
+</Page>

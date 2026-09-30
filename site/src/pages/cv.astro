@@ -1,0 +1,105 @@
+---
+// Port of the old app/cv/page.jsx
+import { getEntry } from 'astro:content';
+import Page from '../layouts/Page.astro';
+import PageWrapper from '../components/PageWrapper.astro';
+import SectionHeading from '../components/common/SectionHeading.astro';
+import TableOfContents from '../components/common/TableOfContents.astro';
+import ExperienceLine from '../components/cv/ExperienceLine.astro';
+import Icon from '../components/Icon.astro';
+
+const { sections, pdf, linkedin } = (await getEntry('cv', 'cv'))!.data;
+// Same ids SectionHeading gives its <h2>.
+const headingId = (title: string) => title.replace(/[^\w\s$*_+~.()'"!\-:@]+/g, '').trim().replace(/\s+/g, '-');
+const sectionId = (title: string) => headingId(title).toLowerCase();
+const button =
+  'flex h-min w-max cursor-pointer select-none items-center justify-center gap-2 rounded-md border border-text px-4 py-2 text-center text-xs transition-all duration-200 hover:-translate-y-[2px] dark:border-darktext';
+---
+
+<Page title="CV - Jakub Sekula" description="My professional experience, education and interests">
+  <PageWrapper title="Curriculum Vitae">
+    {
+      pdf && (
+        <a href={pdf} target="_blank" rel="noreferrer" class:list={['ml-auto mt-4 lg:hidden', button]}>
+          <Icon name="download" size={16} />
+          Download PDF
+        </a>
+      )
+    }
+    <aside
+      class="row-[span_7_/_span_7] row-start-1 hidden w-full flex-col text-right text-sm
+        font-light lg:col-span-3 lg:col-start-10 lg:block "
+    >
+      <nav aria-label="Table of contents" class="sticky top-16">
+        <ul class="flex flex-col">
+          <TableOfContents headings={sections.map((s) => ({ id: headingId(s.title), title: s.title }))} />
+          {
+            pdf && (
+              <li>
+                <a href={pdf} target="_blank" rel="noreferrer" class:list={[' ml-auto mt-4', button]}>
+                  <Icon name="download" size={16} />
+                  Download PDF
+                </a>
+              </li>
+            )
+          }
+          {
+            linkedin && (
+              <li>
+                <a
+                  class=" ml-auto mt-4 flex h-min w-max cursor-pointer select-none items-center
+                    justify-center gap-2 rounded-md
+                    text-center text-xs transition-all duration-200 hover:-translate-y-[2px]
+                  "
+                  href={linkedin}
+                >
+                  View on LinkedIn
+                  <Icon name="linkedin" size={24} />
+                </a>
+              </li>
+            )
+          }
+        </ul>
+      </nav>
+    </aside>
+
+    {
+      sections.map((section) => (
+        <section id={sectionId(section.title)} class="col-span-full mb-4 flex flex-col rounded-lg lg:col-span-9 lg:col-start-1">
+          <SectionHeading color={section.accent} title={section.title} class="top-24 w-full pb-4" />
+          <div class="flex flex-col gap-5">
+            {section.entries
+              .filter((entry) => !entry.hidden)
+              .map((entry) => {
+                if (entry.kind === 'role') return <ExperienceLine entry={entry} />;
+                if (entry.kind === 'bullets') {
+                  return (
+                    <article class="flex flex-col">
+                      <ul class="mt-2 flex flex-col text-sm font-light leading-relaxed 2xl:text-base">
+                        {entry.bullets.map((bullet) => (
+                          <li>∙ {bullet}</li>
+                        ))}
+                      </ul>
+                    </article>
+                  );
+                }
+                return (
+                  <article class="flex flex-col">
+                    <div
+                      class="flex justify-between border-b border-neutral-200 pb-1
+      font-heading font-light dark:border-darktext/5"
+                    >
+                      <div class="flex flex-col">
+                        <h3>{entry.title}</h3>
+                      </div>
+                    </div>
+                    <div class="mt-1 text-sm font-light leading-relaxed 2xl:text-base">{entry.items.join(', ')}</div>
+                  </article>
+                );
+              })}
+          </div>
+        </section>
+      ))
+    }
+  </PageWrapper>
+</Page>

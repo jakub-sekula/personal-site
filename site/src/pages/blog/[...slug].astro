@@ -1,0 +1,77 @@
+---
+// Port of the old app/blog/[post]/page.jsx + MarkdownRenderer.
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+import { Image } from 'astro:assets';
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import TableOfContents from '../../components/common/TableOfContents.astro';
+import { mdxComponents } from '../../components/mdx';
+import { getPosts, tagSlug } from '../../lib/content';
+
+export const getStaticPaths = (async () => {
+  const posts = await getPosts();
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}) satisfies GetStaticPaths;
+
+const { post } = Astro.props;
+const { Content, headings } = await render(post);
+
+// Nest h3s under their h2, as the old client-side table of contents did.
+const toc: { id: string; title: string; items: { id: string; title: string }[] }[] = [];
+for (const h of headings) {
+  if (h.depth === 2) toc.push({ id: h.slug, title: h.text, items: [] });
+  else if (h.depth === 3 && toc.length) toc.at(-1)!.items.push({ id: h.slug, title: h.text });
+}
+---
+
+<Base title={`${post.data.title} - Jakub Sekula`} description={post.data.description} image={post.data.cover?.src}>
+  <Header />
+  <main class="mx-auto grid w-full max-w-page grid-cols-12 pt-16">
+    {
+      post.data.cover && (
+        <div
+          class="relative col-span-full mx-auto aspect-video max-h-[480px]
+                     w-full overflow-hidden rounded-b-xl lg:col-span-10 lg:col-start-2
+                     lg:mt-8 lg:rounded-xl"
+        >
+          <Image src={post.data.cover} alt={post.data.title} widths={[960, 1920]} sizes="(min-width: 1024px) 1125px, 100vw" loading="eager" class="absolute h-full w-full object-cover" />
+        </div>
+      )
+    }
+    <div class="col-span-full px-6 pb-6 pt-8 md:col-span-8 md:col-start-3 lg:col-span-10 lg:col-start-2 lg:px-0 col-span-full ">
+      <div class="mb-4 block text-sm font-light">{post.data.date.toLocaleDateString('en-gb')}</div>
+      <div class="mb-2 flex gap-2">
+        {
+          post.data.tags.map((tag) => (
+            <a
+              href={`/tags/${tagSlug(tag)}`}
+              class="rounded-sm bg-darkbg px-2 py-0.5 text-xs
+                      text-darktext dark:bg-darktext dark:text-text"
+            >
+              {tag}
+            </a>
+          ))
+        }
+      </div>
+      <h1 class="-mb-3 font-heading text-3xl font-semibold tracking-tight ">{post.data.title}</h1>
+    </div>
+
+    <div
+      class="prose-pre:overflow-x-none prose col-span-full row-start-3 w-full max-w-none
+				  px-6 font-light prose-pre:m-0 prose-pre:h-min prose-pre:p-0
+				dark:prose-invert md:col-span-8 md:col-start-3 lg:px-0 lg:col-span-7 lg:col-start-2 lg:pr-24 prose-img:rounded-sm prose-a:visited:text-purple-400 dark:prose-a:visited:text-purple-600"
+    >
+      <Content components={mdxComponents} />
+    </div>
+
+    <aside class="sticky top-20 col-span-3 col-start-9 row-start-3 hidden h-min lg:block">
+      <h4 class="mb-2 font-heading text-lg font-semibold">In this post:</h4>
+      <ul class="font-light">
+        <TableOfContents headings={toc} depth={2} />
+      </ul>
+    </aside>
+  </main>
+  <Footer />
+</Base>

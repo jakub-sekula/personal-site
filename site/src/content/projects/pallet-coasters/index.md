@@ -1,0 +1,13 @@
+---
+title: Pallet Coasters
+excerpt: Handcrafted walnut drink coasters resembling shipping pallets, perfect for gifting
+type: Engineering
+color: blue
+order: 3
+date: 2023-02-26
+cover: ./cover.jpg
+tags:
+  - Design
+---
+
+Pallet Coasters are unique drink coasters designed to resemble shipping pallets. Crafted from solid walnut using a laser cutter, each coaster is carefully cut out in parts and then assembled without the use of glue. The coasters are meticulously sanded and treated with Danish oil for a smooth and durable finish.

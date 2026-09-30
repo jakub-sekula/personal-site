@@ -1,0 +1,76 @@
+---
+// Port of components/common/TableOfContents: sticky list of the page's headings,
+// highlighting the one in view (same IntersectionObserver setup as before).
+interface Props {
+  headings: { id: string; title: string; items?: { id: string; title: string }[] }[];
+  depth?: 1 | 2;
+  border?: boolean;
+}
+
+const { headings, depth = 1, border = true } = Astro.props;
+const inactive = 'border-text/10 text-text/50 dark:text-darktext/50 dark:border-text/10';
+const active = 'border-js-yellow text-text dark:text-darktext font-semibold';
+---
+
+<toc-list data-depth={depth} data-inactive={inactive} data-active={active} class="contents">
+  {
+    headings.map((heading) => (
+      <li class:list={[inactive, border && 'border-r-2 pr-4', 'pb-3 transition-all duration-100']} data-toc={heading.id}>
+        <a href={`#${heading.id}`} class="hover:text-text dark:hover:text-darktext">
+          {heading.title}
+        </a>
+        {depth === 2 && heading.items && heading.items.length > 0 && (
+          <ul class="pt-3">
+            {heading.items.map((child) => (
+              <li class:list={[inactive, 'mb-4 pl-2 text-sm transition-all duration-100 last:mb-0']} data-toc={child.id}>
+                <a
+                  href={`#${child.id}`}
+                  class="transition-all duration-200 hover:text-text dark:hover:text-darktext dark:text-darktext/50 text-text/50 "
+                >
+                  {child.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    ))
+  }
+</toc-list>
+
+<script>
+  class TocList extends HTMLElement {
+    connectedCallback() {
+      const inactive = this.dataset.inactive!.split(' ');
+      const active = this.dataset.active!.split(' ');
+      const items = [...this.querySelectorAll<HTMLElement>('[data-toc]')];
+      const headings = items.map((li) => document.getElementById(li.dataset.toc!)).filter((h): h is HTMLElement => !!h);
+      const visible = new Map<string, boolean>();
+
+      const setActive = (id: string) =>
+        items.forEach((li) => {
+          const on = li.dataset.toc === id;
+          active.forEach((c) => li.classList.toggle(c, on));
+          inactive.forEach((c) => li.classList.toggle(c, !on));
+        });
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => visible.set(e.target.id, e.isIntersecting));
+          const first = headings.find((h) => visible.get(h.id));
+          if (first) setActive(first.id);
+        },
+        { rootMargin: '-120px 0px 10% 0px' },
+      );
+      headings.forEach((h) => observer.observe(h));
+
+      this.addEventListener('click', (e) => {
+        const link = (e.target as HTMLElement).closest('a');
+        if (!link) return;
+        e.preventDefault();
+        document.querySelector(link.getAttribute('href')!)?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+  }
+  customElements.define('toc-list', TocList);
+</script>

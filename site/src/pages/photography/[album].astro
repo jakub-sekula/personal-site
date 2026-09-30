@@ -1,0 +1,118 @@
+---
+// Port of the old app/photography/[category]/page.tsx + LightboxWrapper.
+import type { GetStaticPaths } from 'astro';
+import Photography from '../../layouts/Photography.astro';
+import Icon from '../../components/Icon.astro';
+import Picture from '../../components/photos/Picture.astro';
+import GalleryLightbox from '../../components/photos/GalleryLightbox';
+import { getAlbums, getChildAlbums } from '../../lib/content';
+import { getPhoto } from '../../lib/photos';
+import { toSlides } from '../../lib/lightbox';
+
+export const getStaticPaths = (async () => {
+  const albums = await getAlbums();
+  return albums.map((album) => ({ params: { album: album.id }, props: { album } }));
+}) satisfies GetStaticPaths;
+
+const { album } = Astro.props;
+const { title, photos } = album.data;
+const description = album.body?.trim() ?? '';
+const children = await getChildAlbums(album);
+const cover = getPhoto(album.data.cover);
+
+// Strapi albums were made of sections; `newSection` on a photo starts the next one.
+const sections: { photo: (typeof photos)[number]; index: number }[][] = [];
+photos.forEach((photo, index) => {
+  if (index === 0 || photo.newSection) sections.push([]);
+  sections.at(-1)!.push({ photo, index });
+});
+const galleryId = `gallery-${album.id}`;
+---
+
+<Photography title={`${title.replace(/^\p{Regional_Indicator}{2}\s*/u, '')} - Jakub Sekula`} description={description || title} image={cover.url(1280)}>
+  <section class="relative flex h-screen max-h-[400px] max-w-[1920px] items-center justify-center overflow-hidden rounded-sm">
+    <div class="absolute inset-0 z-10 h-full bg-gradient-to-tr from-darkbg/90"></div>
+    <Picture src={album.data.cover} alt={title} sizes="(min-width: 1350px) 1080px, 100vw" eager class="absolute inset-0 z-0 mx-auto h-full w-full object-cover" />
+    <div class="z-20 p-6 flex w-full max-w-page flex-col items-center text-white ">
+      <a href="/photography" class="mb-4 flex items-center gap-1 text-sm font-light">
+        <Icon name="chevron-left" size={16} />
+        Back to albums
+      </a>
+      <h1
+        class="mb-3 break-words font-heading text-3xl md:text-5xl font-bold
+                uppercase leading-none tracking-tight xl:text-[5.5rem] 2xl:text-[6rem]"
+      >
+        {title}
+      </h1>
+      <p class="max-w-[75ch] text-center text-sm font-light md:text-lg">{description}</p>
+      {album.data.tags.map((tag) => <span>{tag}</span>)}
+    </div>
+  </section>
+
+  {
+    children.length > 0 && (
+      <section class="col-span-full grid w-full max-w-page grid-cols-12 gap-4 py-4">
+        {children.map((child) => (
+          <a
+            href={`/photography/${child.id}`}
+            class="group relative col-span-full md:col-span-4 flex  flex-col items-center justify-center gap-4
+                      overflow-hidden rounded-sm aspect-[2.5] md:aspect-[3/2] px-3 py-6 font-bold dark:border-0"
+          >
+            <Picture
+              src={child.data.cover}
+              alt={child.data.title}
+              sizes="(min-width: 768px) 30vw, 100vw"
+              class="absolute -z-10 h-full w-full object-cover transition-transform group-hover:scale-105"
+            />
+            <div class="absolute inset-0 bg-gradient-to-tr from-darkbg/50 " />
+            <h6 class="z-10 font-heading text-2xl font-semibold uppercase text-white">{child.data.title}</h6>
+          </a>
+        ))}
+      </section>
+    )
+  }
+
+  <div id={galleryId} class="contents">
+    {
+      sections.map((items) => (
+        <section class="col-span-full grid w-full grid-cols-12 pt-4">
+          <div class="col-span-full mx-auto grid w-full grid-cols-12 gap-4">
+            {items.map(({ photo, index }) => {
+              const { w, h } = getPhoto(photo.src);
+              const alt = photo.alt ?? photo.caption ?? title;
+              return (
+                <div
+                  class="group relative z-0 aspect-[3/2] overflow-hidden md:rounded-sm bg-neutral-100 col-span-6 lg:col-span-4"
+                  data-slide={index}
+                  role="button"
+                  tabindex="0"
+                  aria-label={`Open photo ${index + 1}`}
+                >
+                  {h >= w && (
+                    <Picture
+                      src={photo.src}
+                      alt=""
+                      sizes="(min-width: 1024px) 25vw, 50vw"
+                      eager={index < 6}
+                      placeholder={false}
+                      class="absolute z-20 h-full w-full scale-[110%] object-cover blur-md  transition-all duration-500 ease-out group-hover:scale-[112.5%]"
+                    />
+                  )}
+                  <Picture
+                    src={photo.src}
+                    alt={alt}
+                    sizes="(min-width: 1024px) 25vw, 50vw"
+                    eager={index < 6}
+                    placeholder={w >= h}
+                    class:list={['absolute z-50 h-full w-full transition-all duration-500 ease-out group-hover:scale-[102.5%]', w >= h ? 'object-cover' : 'object-contain']}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+  {photos.length > 0 && <GalleryLightbox client:idle target={galleryId} slides={toSlides(photos)} />}
+</Photography>

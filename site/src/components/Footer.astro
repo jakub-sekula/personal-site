@@ -1,0 +1,34 @@
+---
+// Port of the old components/layout/Footer.jsx.
+import Icon from './Icon.astro';
+---
+
+<footer
+  class="mt-24 flex w-full flex-col items-center justify-center
+     border-t border-zinc-300 bg-neutral-50 font-light dark:border-0
+    dark:bg-black/20"
+>
+  <div class="flex w-full flex-col gap-6 py-10 items-center text-center">
+    <h4 class="font-heading text-4xl font-bold">Let&apos;s talk!</h4>
+    <div class="flex flex-col gap-2">
+      <p>I&apos;m open to remote freelance opportunities.</p>
+      <p>Shoot me a message and let&apos;s make cool things together:</p>
+    </div>
+    <a href="mailto:contact@jakubsekula.com" class="font-bold">contact@jakubsekula.com</a>
+    <div class="flex gap-10">
+      <a target="_blank" rel="noreferrer" href="https://github.com/jakub-sekula" aria-label="GitHub"><Icon name="github" /></a>
+      <a target="_blank" rel="noreferrer" href="https://instagram.com/sekula.jpg" aria-label="Instagram"><Icon name="instagram" /></a>
+      <a target="_blank" rel="noreferrer" href="https://www.linkedin.com/in/jakub-sekula" aria-label="LinkedIn"><Icon name="linkedin" /></a>
+    </div>
+  </div>
+  <div
+    class="flex w-full flex-col items-center justify-center
+      gap-2 border-t border-zinc-300 py-6 text-xs
+      dark:border-neutral-800 dark:text-zinc-600"
+  >
+    <span class="text-base">Made with ❤️ in Bristol, UK</span>
+    <a href="https://github.com/jakub-sekula/personal-site" class="flex items-center gap-2">
+      View page source on Github <Icon name="github" size={14} />
+    </a>
+  </div>
+</footer>

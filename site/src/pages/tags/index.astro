@@ -1,0 +1,17 @@
+---
+// The old /tags page only dumped JSON; this is a plain list in the site's style.
+import Page from '../../layouts/Page.astro';
+import PageWrapper from '../../components/PageWrapper.astro';
+import Tag from '../../components/common/Tag.astro';
+import { getTags } from '../../lib/content';
+
+const tags = [...(await getTags())].sort(([, a], [, b]) => a.name.localeCompare(b.name));
+---
+
+<Page title="Tags - Jakub Sekula">
+  <PageWrapper title="Tags" class="max-w-3xl">
+    <ul class="col-span-full flex flex-wrap justify-center gap-3">
+      {tags.map(([slug, tag]) => <Tag href={`/tags/${slug}`} title={`${tag.name} (${tag.posts.length + tag.projects.length})`} />)}
+    </ul>
+  </PageWrapper>
+</Page>

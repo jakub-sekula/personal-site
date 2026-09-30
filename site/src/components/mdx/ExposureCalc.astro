@@ -1,0 +1,42 @@
+---
+// Example of an interactive widget in a post: a custom element with its own
+// script tag (below). Astro bundles it once, and only on pages that use it.
+const apertures = [1.4, 2, 2.8, 4, 5.6, 8, 11, 16];
+const shutters = ['1/1000', '1/500', '1/250', '1/125', '1/60', '1/30', '1/15', '1/8'];
+const isos = [100, 200, 400, 800, 1600, 3200];
+const select = 'rounded border border-text/10 dark:border-darktext/10 bg-lightbg dark:bg-darkbg px-2 py-1';
+---
+
+<exposure-calc class="not-prose my-6 block rounded-md border border-text/10 dark:border-darktext/10 p-5">
+  <div class="flex flex-wrap items-end gap-4 text-sm">
+    <label class="flex flex-col gap-1">Aperture
+      <select name="n" class={select}>{apertures.map((a) => <option value={a} selected={a === 8}>f/{a}</option>)}</select>
+    </label>
+    <label class="flex flex-col gap-1">Shutter
+      <select name="t" class={select}>{shutters.map((s) => <option value={s} selected={s === '1/125'}>{s}s</option>)}</select>
+    </label>
+    <label class="flex flex-col gap-1">ISO
+      <select name="iso" class={select}>{isos.map((i) => <option value={i}>{i}</option>)}</select>
+    </label>
+    <p class="ml-auto text-right">
+      <span class="block text-xs opacity-75">EV at ISO 100</span>
+      <output class="font-mono text-2xl font-semibold">–</output>
+    </p>
+  </div>
+</exposure-calc>
+
+<script>
+  class ExposureCalc extends HTMLElement {
+    connectedCallback() {
+      this.addEventListener('change', () => this.update());
+      this.update();
+    }
+    update() {
+      const value = (name: string) => this.querySelector<HTMLSelectElement>(`[name=${name}]`)!.value;
+      const [num, den] = value('t').split('/').map(Number);
+      const ev = Math.log2(Number(value('n')) ** 2 / (num / den)) - Math.log2(Number(value('iso')) / 100);
+      this.querySelector('output')!.textContent = ev.toFixed(1);
+    }
+  }
+  customElements.define('exposure-calc', ExposureCalc);
+</script>

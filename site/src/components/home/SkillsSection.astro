@@ -1,0 +1,36 @@
+---
+// Port of components/home/SkillsSection.jsx (off on the live site; enable via `skills` in home.yaml).
+import { getEntries } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import SectionContainer from './SectionContainer.astro';
+import SectionHeading from '../common/SectionHeading.astro';
+import ToolCard from '../common/ToolCard.astro';
+
+interface Props {
+  skills: CollectionEntry<'home'>['data']['skills'];
+}
+
+const colors = ['red', 'green', 'blue', 'yellow'] as const;
+const groups = await Promise.all(Astro.props.skills.map(async (g) => ({ title: g.title, tools: await getEntries(g.tools) })));
+---
+
+<SectionContainer title="Skills">
+  <div class="relative grid w-full grid-cols-12 gap-4 md:gap-12">
+    <div class=" absolute left-1/2  top-1/2 -z-50 h-full max-h-[500px]  w-full max-w-[500px] -translate-y-[125%] rounded-full bg-gradient-to-t  from-blue-500   to-blue-500 opacity-0 blur-[150px] dark:opacity-20 md:-translate-x-full md:-translate-y-1/4"></div>
+    <div class="absolute left-1/2  top-1/2 -z-50 h-full max-h-[600px] w-full max-w-[600px] -translate-x-full rounded-full bg-gradient-to-t from-blue-400  to-blue-700 opacity-0 blur-[150px] dark:opacity-40 md:-translate-y-1/2 md:translate-x-1/4"></div>
+    {
+      groups.map((group, index) => (
+        <div
+          class="reveal fade-bottom relative col-span-full flex flex-col
+            gap-4 md:col-span-4 "
+          style={`animation-delay: ${200 * index}ms; transition-delay: ${200 * index}ms`}
+        >
+          <SectionHeading title={group.title} color={colors[index % 4]} />
+          <div class="grid grid-cols-2 gap-2 ">
+            {group.tools.map((tool) => <ToolCard tool={tool} />)}
+          </div>
+        </div>
+      ))
+    }
+  </div>
+</SectionContainer>

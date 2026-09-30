@@ -1,0 +1,64 @@
+---
+// Justified-rows gallery for use inside posts, opening the same lightbox as album pages.
+//   <Gallery album="greece" />                       every photo in an album
+//   <Gallery photos={[{ src: 'greece/img-7785-f44e1767', caption: '…' }]} />
+import { getEntry } from 'astro:content';
+import { getPhoto } from '../../lib/photos';
+import { toSlides } from '../../lib/lightbox';
+import Picture from './Picture.astro';
+import GalleryLightbox from './GalleryLightbox';
+
+interface Props {
+  album?: string;
+  photos?: { src: string; caption?: string; alt?: string }[];
+  /** Target row height in rem; rows flex around it to fill the width. */
+  rowHeight?: number;
+  /** Override the computed `sizes` (e.g. for a single full-width photo). */
+  sizes?: string;
+}
+
+const { album, rowHeight = 16, sizes } = Astro.props;
+let { photos } = Astro.props;
+let fallbackAlt = 'Photo';
+
+if (album) {
+  const entry = await getEntry('albums', album);
+  if (!entry) throw new Error(`<Gallery album="${album}">: no such album`);
+  photos ??= entry.data.photos;
+  fallbackAlt = entry.data.title;
+}
+if (!photos?.length) throw new Error('<Gallery>: pass `album` or a non-empty `photos` list');
+
+const items = photos.map((p) => {
+  const { w, h } = getPhoto(p.src);
+  const ratio = w / h;
+  return {
+    ...p,
+    ratio,
+    alt: p.alt ?? p.caption ?? fallbackAlt,
+    // Rendered width ≈ ratio × row height; generous so 2x screens stay sharp.
+    sizes: sizes ?? `(min-width: 640px) ${Math.ceil(ratio * rowHeight * 16 * 1.25)}px, 100vw`,
+  };
+});
+const id = `gallery-${Math.random().toString(36).slice(2, 10)}`;
+---
+
+<div id={id} class="not-prose flex flex-wrap gap-2">
+  {
+    items.map((item, i) => (
+      <div
+        data-slide={i}
+        role="button"
+        tabindex="0"
+        aria-label={`Open photo ${i + 1}`}
+        class="group relative block cursor-pointer overflow-hidden rounded-sm"
+        style={`flex: ${item.ratio} 1 ${item.ratio * rowHeight}rem; aspect-ratio: ${item.ratio}`}
+      >
+        <Picture src={item.src} alt={item.alt} sizes={item.sizes} class="size-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+      </div>
+    ))
+  }
+  {/* Soaks up leftover space so the last row isn't stretched (a lone photo should fill the width). */}
+  {items.length > 1 && <span aria-hidden="true" style="flex-grow: 1000000000" />}
+</div>
+<GalleryLightbox client:visible target={id} slides={toSlides(photos)} />

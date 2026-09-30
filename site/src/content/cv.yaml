@@ -1,0 +1,170 @@
+- id: cv
+  pdf: /jakub-sekula-cv.pdf
+  linkedin: https://www.linkedin.com/in/jakub-sekula/
+  sections:
+    - title: Professional Experience
+      accent: green
+      entries:
+        - kind: role
+          title: UI/UX designer
+          place: Abiliti
+          years: 2023 - present
+          logo: ../assets/cv/abiliti-logo.jpeg
+          hidden: true
+        - kind: role
+          title: Mechanical Engineer
+          place: Crux Product Design
+          years: 2022 - present
+          logo: ../assets/cv/crux.jpeg
+          bullets:
+            - Developed mechanical concepts for machining and injection moulding using Solidworks
+            - Utilised ABAQUS CAE for finite element analysis of mechanical parts
+            - Evaluated device concept feasibility through rapid prototyping and lab testing
+            - Carried out material research and testing for a new type of dry powder inhaler
+            - Led the development of a packaging innovation and standardisation project for a major pharma manufacturer
+            - Rebuilt the company intranet pages using ReactJS and Strapi CMS
+        - kind: role
+          title: Web Designer & Web Developer
+          place: Baba Ali
+          years: 2021 - 2022
+          logo: ../assets/cv/babaali.jpeg
+          bullets:
+            - Designed, developed, and maintained customer websites using WordPress, HTML, CSS and JS
+            - Developed and managed custom Shopify and WooCommerce storefronts
+        - kind: role
+          title: Research & Development Engineer
+          place: Aston Martin Formula One Team
+          years: 2020 - 2021
+          logo: ../assets/cv/aston.jpeg
+          bullets:
+            - Designed R&D test rig parts and assemblies using CATIA V6
+            - Worked with R&D and electronics engineers on developing and implementing a new tyre temperature sensor
+            - Streamlined the process for calibrating and testing the tyre thermal cameras by writing custom VBA scripts
+            - Carried out mechanical tests of parts in the R&D workshop and reported the collected data to higher-ups
+            - Developed a new torsion bar testing rig which was successfully deployed and is currently used by the team
+        - kind: role
+          title: Co-Founder
+          place: MOSU Poland
+          years: 2020 - 2021
+          logo: ../assets/cv/mosu.jpeg
+          bullets:
+            - Co-founded a company providing environmentally friendly toothbrushes in a subscription model
+            - Created all brand visuals and marketing materials, such as social media adverts
+            - Responsible for company strategy and growing customer base
+            - Managed sales, customer relations and marketing analytics
+        - kind: role
+          title: Graphic Designer
+          place: University of Birmingham Guild of Students
+          years: 2019 - 2020
+          logo: ../assets/cv/guild.jpeg
+          bullets:
+            - Created graphical assets for social media and print, such as posters, flyers, and event branding
+            - Designed a campus-wide poster campaign informing students of the impact of their feedback
+        - kind: role
+          title: Graphic Designer
+          place: Britas Travel
+          years: 2015 - 2022
+          logo: ../assets/cv/britas.jpeg
+          bullets:
+            - Freelance
+          hidden: true
+    - title: Education
+      accent: yellow
+      entries:
+        - kind: role
+          title: MEng Mechanical Engineering with Industrial Year (1st class Hons)
+          place: University of Birmingham
+          years: 2017 - 2022
+          logo: ../assets/cv/uob.jpeg
+          bullets:
+            - "Dissertation title: Development of a low-cost PIV/PTV system for in-process tracking of graphene production"
+    - title: Skills and Abilities
+      accent: blue
+      entries:
+        - kind: list
+          title: Technical
+          items:
+            - Data Analysis
+            - Technical Drawing
+            - GD&T
+        - kind: list
+          title: Programming
+          items:
+            - Python
+            - JavaScript
+            - HTML
+            - CSS
+            - React
+            - SQLite
+            - Node
+            - Linux
+            - Docker
+            - REST APIs
+            - Bash
+        - kind: list
+          title: Soft Skills
+          items:
+            - Presentations
+            - Teamwork
+            - Communication
+            - Report Writing
+            - Analytical Thinking
+            - Problem Solving
+        - kind: list
+          title: Software
+          items:
+            - SolidWorks
+            - CATIA
+            - MS Office
+            - Git
+            - Arduino
+            - Raspberry Pi
+            - Photoshop
+            - Illustrator
+            - Figma
+        - kind: list
+          title: Languages
+          items:
+            - English (bilingual)
+            - Polish (native)
+            - German (intermediate)
+    - title: Extracurriculars
+      accent: red
+      entries:
+        - kind: role
+          title: Mechanical Designer and Prototyping Lead
+          place: UBRacing Formula Student Team
+          years: 2018 - 2020
+          logo: ../assets/cv/ubracing.jpeg
+          bullets:
+            - Designed and manufactured and tested in a wind tunnel a modular, 30% scale racing car model
+            - Machined car parts from aluminium using a lathe and a vertical milling machine
+            - Produced carbon fibre parts, prepared 3D-printed moulds and laid up carbon fibre
+    - title: Awards and Certificates
+      accent: green
+      entries:
+        - kind: role
+          title: MathWorks
+          place: MATLAB Fundamentals course
+          years: "2019"
+          logo: ../assets/cv/mathworks.jpeg
+        - kind: role
+          title: Third place
+          place: Young Innovators’ Prize - HEFI digital innovation boot camp
+          years: "2019"
+          logo: ../assets/cv/uob.jpeg
+        - kind: role
+          title: First place
+          place: The Birmingham Project | Designing the future of transport
+          years: "2018"
+          logo: ../assets/cv/uob.jpeg
+    - title: Hobbies and interests
+      accent: red
+      entries:
+        - kind: bullets
+          bullets:
+            - Frontend and backend web application development
+            - DIY electronics using microcontrollers and single board computers (Arduino, Raspberry Pi)
+            - Industrial design, UI/UX design, 3D modelling and 3D printing
+            - Photography and video production
+            - Weightlifting and swimming

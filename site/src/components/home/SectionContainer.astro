@@ -1,0 +1,17 @@
+---
+// Port of components/home/SectionContainer.jsx
+interface Props {
+  title?: string;
+}
+
+const { title = '' } = Astro.props;
+---
+
+<section
+  id={`${title}-section`}
+  class="reveal fade-bottom mx-auto mb-8 md:mb-32 flex w-full max-w-page flex-col
+      items-center gap-4 px-6 last:mb-0 md:gap-12 xl:px-4 2xl:px-0 overflow-hidden md:overflow-visible"
+>
+  {title && <h2 class="font-heading text-2xl font-semibold md:mb-4 md:text-4xl ">{title}</h2>}
+  <slot />
+</section>

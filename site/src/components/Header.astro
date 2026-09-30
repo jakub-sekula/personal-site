@@ -1,0 +1,171 @@
+---
+// Port of the old components/layout/HeaderNew.tsx + ColorSchemeToggle.
+// Behaviour kept: hides on scroll down, transparent over the homepage hero,
+// full-screen menu on mobile. React state is replaced by the script below.
+import Icon from './Icon.astro';
+
+const links = [
+  { label: 'Projects', href: '/projects', color: 'blue' },
+  { label: 'Photography', href: '/photography', color: 'green' },
+  { label: 'CV', href: '/cv', color: 'yellow' },
+] as const;
+
+const COLORS = {
+  red: 'after:bg-js-red',
+  green: 'after:bg-js-green',
+  blue: 'after:bg-js-blue',
+  yellow: 'after:bg-js-yellow',
+};
+
+const pathname = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isHome = pathname === '/';
+const section = `/${pathname.split('/')[1]}`;
+---
+
+<header
+  id="site-header"
+  data-active="false"
+  data-home={isHome ? 'true' : undefined}
+  class:list={[
+    isHome ? 'text-darktext' : 'text-text',
+    'top-0',
+    // Server-rendered state is "not over the hero", as on the old site; the script takes over.
+    'data-[active=false]:bg-white/90 dark:text-darktext dark:data-[active=false]:bg-darkbg/90 dark:data-[active=false]:backdrop-blur-md md:text-text dark:stroke-darktext md:stroke-text',
+    'group fixed z-50 flex h-screen max-h-16 w-full shrink-0 flex-col items-baseline justify-between gap-8 overflow-hidden  px-6 py-4 transition-all delay-100 duration-300 ease-out  data-[active=true]:top-0 data-[active=true]:max-h-screen data-[active=true]:bg-black dark:text-darktext  md:h-auto  md:max-h-full md:w-full md:flex-row md:border-r md:bg-transparent ',
+  ]}
+>
+  <div class="flex w-full items-center justify-between">
+    <a href="/" rel="home">
+      <div class="mx-auto flex w-full flex-col items-start justify-center gap-2 font-mono md:mx-0 md:flex-row md:items-center md:justify-start">
+        <span class="font-bold">
+          <span class="text-js-yellow">jakubsekula<span class="text-js-blue">@personal</span>:</span>
+          <span class="text-white">~</span>
+          <span class="text-js-blue">$</span>
+        </span>
+      </div>
+    </a>
+    <button
+      id="nav-menu-toggle"
+      class="group flex h-8 w-8 flex-col items-center justify-end overflow-hidden border-none bg-transparent p-0 text-xs md:hidden"
+      aria-controls="site-navigation"
+      aria-expanded="false"
+      aria-label="Menu"
+      data-active="false"
+    >
+      <i class="h-8 w-8 p-1 group-data-[active=false]:hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-full w-full stroke-white" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+          <path d="M18 6l-12 12"></path>
+          <path d="M6 6l12 12"></path>
+        </svg>
+      </i>
+      <i class="h-8 w-8 p-1 group-data-[active=true]:hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" data-stroke class="h-full w-full dark:stroke-darktext stroke-text" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+          <path d="M4 6l16 0"></path>
+          <path d="M4 12l16 0"></path>
+          <path d="M4 18l16 0"></path>
+        </svg>
+      </i>
+    </button>
+  </div>
+
+  <nav
+    id="site-navigation"
+    class="h-full w-full opacity-0 transition-opacity delay-200 duration-150 ease-out data-[active=true]:opacity-100 md:opacity-100"
+    data-active="false"
+  >
+    <ul class="flex h-full w-full flex-col items-center md:flex-row md:justify-end md:gap-14 md:pt-0">
+      {
+        links.map(({ label, href, color }) => (
+          <li class="w-full border-b border-text text-lg md:m-0 md:w-fit md:border-none md:p-0">
+            <a
+              href={href}
+              class:list={[
+                'font-headings border-text-10 relative flex h-fit w-full grow-0 items-center py-4 transition-all md:transition-none duration-200 after:absolute after:-bottom-1 after:left-0 after:-z-10 after:h-[2px] after:w-full after:opacity-0 after:transition-all after:duration-300 hover:after:opacity-100  hover:dark:bg-darkbg/50  md:h-min md:justify-center md:border-none md:py-0 md:text-sm',
+                section === href && 'md:after:opacity-100',
+                COLORS[color],
+              ]}
+            >
+              {label}
+            </a>
+          </li>
+        ))
+      }
+      <button
+        id="theme-toggle"
+        aria-label="colour-theme-toggle"
+        class="font-headings relative mt-auto flex h-fit w-full grow-0 flex-row-reverse items-center justify-between border-t border-text pt-4 pb-8 text-lg md:m-0 md:h-8 md:w-8 md:border-none md:justify-center md:p-0"
+      >
+        <i class="hidden h-6 w-6 md:w-5 md:h-5 dark:block">
+          <Icon name="moon-stars" size={18} class="h-full w-full" />
+        </i>
+        <i class="block h-6 w-6 md:w-5 md:h-5 dark:hidden">
+          <Icon name="sun" size={18} class="h-full w-full" />
+        </i>
+        <span class="inline-block md:hidden">Toggle theme</span>
+      </button>
+    </ul>
+  </nav>
+</header>
+
+<script>
+  const header = document.getElementById('site-header')!;
+  const button = document.getElementById('nav-menu-toggle')!;
+  const nav = document.getElementById('site-navigation')!;
+  const burger = header.querySelector<SVGElement>('[data-stroke]')!;
+  const isHome = header.dataset.home === 'true';
+
+  // Class sets from the old component: over the hero vs. everywhere else.
+  const ON_HERO = ['text-darktext', 'stroke-darktext'];
+  const OFF_HERO =
+    'data-[active=false]:bg-white/90 dark:text-darktext dark:data-[active=false]:bg-darkbg/90 dark:data-[active=false]:backdrop-blur-md md:text-text dark:stroke-darktext md:stroke-text'.split(' ');
+  const BURGER_ON_HERO = ['stroke-darktext'];
+  const BURGER_OFF_HERO = ['dark:stroke-darktext', 'stroke-text'];
+
+  const hero = isHome ? document.getElementById('hero-section') : null;
+  let lastY = window.scrollY;
+  let direction: 'up' | 'down' | null = null;
+
+  function update() {
+    const y = window.scrollY;
+    if (Math.abs(y - lastY) > 5) {
+      direction = y > lastY ? 'down' : 'up';
+      lastY = Math.max(y, 0);
+    }
+    header.classList.toggle('-top-16', direction === 'down');
+    header.classList.toggle('top-0', direction !== 'down');
+
+    const onHero = !!hero && y < hero.clientHeight - 200;
+    ON_HERO.forEach((c) => header.classList.toggle(c, onHero));
+    OFF_HERO.forEach((c) => header.classList.toggle(c, !onHero));
+    BURGER_ON_HERO.forEach((c) => burger.classList.toggle(c, onHero));
+    BURGER_OFF_HERO.forEach((c) => burger.classList.toggle(c, !onHero));
+  }
+  update();
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+
+  function setMenu(active: boolean) {
+    for (const el of [button, nav, header]) el.dataset.active = String(active);
+    button.setAttribute('aria-expanded', String(active));
+    document.body.classList.toggle('no-scroll', active);
+  }
+  button.addEventListener('click', () => setMenu(button.dataset.active !== 'true'));
+
+  document.getElementById('theme-toggle')!.addEventListener('click', () => {
+    const root = document.documentElement;
+    const next = root.classList.contains('dark') ? 'light' : 'dark';
+    // next-themes' disableTransitionOnChange: suppress transitions for the swap.
+    const style = document.createElement('style');
+    style.textContent = '*,*::before,*::after{transition:none!important}';
+    document.head.append(style);
+    root.classList.toggle('dark', next === 'dark');
+    root.style.colorScheme = next;
+    try {
+      localStorage.setItem('theme', next);
+    } catch {}
+    window.getComputedStyle(document.body);
+    setTimeout(() => style.remove(), 1);
+  });
+</script>

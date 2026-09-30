@@ -1,0 +1,17 @@
+---
+// Port of components/common/Hyperlink.jsx
+import Icon from '../Icon.astro';
+
+interface Props {
+  title?: string;
+  href: string;
+  class?: string;
+}
+
+const { title = 'Project details', href, class: className } = Astro.props;
+---
+
+<a href={href} class={`flex items-center gap-1 hover:underline  ${className ? className : null}`}>
+  {title}
+  <Icon name="chevron-right" size={16} />
+</a>

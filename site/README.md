@@ -1,0 +1,86 @@
+# jakubsekula.com
+
+Static site built with [Astro](https://docs.astro.build), deployed to Cloudflare Pages.
+Content lives in this repo as Markdown/MDX/YAML; photos live in a Cloudflare R2 bucket.
+
+It's a backend-less port of the old Next.js + Strapi site and looks the same: the components
+are ported one-to-one, styling is the old Tailwind **v3** config and `globals.css` unchanged
+(`tailwind.config.cjs`, `src/styles/global.css`), and the photo lightbox is the same
+yet-another-react-lightbox, loaded as a small React island on gallery pages only. Like the old
+site it names Albert Sans / Inter / Source Code Pro but doesn't load web fonts.
+
+```bash
+pnpm install
+pnpm dev        # http://localhost:4321 (drafts are visible here, never in builds)
+pnpm build      # → dist/
+pnpm check      # type-check .astro files and content schemas
+```
+
+## Where things are
+
+| What | Where |
+| --- | --- |
+| Homepage copy + what it features | `src/content/home.yaml` (hero, socials, about, project groups, skills, albums) |
+| Photography page + sidebar order | `src/content/photography.yaml` |
+| Projects | `src/content/projects/<slug>/index.{md,mdx}`, cover alongside |
+| Tools (skills, "tools used") | `src/content/tools.yaml`, icons in `src/assets/tools/` |
+| Blog posts | `src/content/blog/<slug>/index.{md,mdx}`, images alongside |
+| Photo albums | `src/content/albums/<slug>.mdx`: frontmatter lists photos (or child `albums`), body is the intro |
+| Photo metadata | `src/data/photos/<album>.json`, **generated**, don't edit by hand |
+| CV | `src/content/cv.yaml`, logos in `src/assets/cv/`, PDF in `public/` |
+| Components usable in MDX without importing | `src/components/mdx/index.ts` |
+| Content schemas | `src/content.config.ts` |
+
+References between content (a project's `tools`/`posts`, the homepage's `projects`/`photography`,
+an album's child `albums`) are checked at build time, so a typo fails the build instead of
+rendering a hole. Anything with `draft: true` shows in `pnpm dev` only.
+
+## Photos
+
+Originals never go in git. `pnpm photos add` resizes each one into AVIF + WebP at
+640/1280/1920/2560px (EXIF and GPS stripped), writes them to `public/photos/` (git-ignored),
+records dimensions and a blur placeholder in `src/data/photos/<album>.json`, and appends
+the photos to the album file.
+
+```bash
+# New album (or add more photos to an existing one)
+pnpm photos add portugal ~/Exports/portugal --title "🇵🇹 Portugal" --parent places
+
+# Edit src/content/albums/portugal.mdx: reorder, add captions, pick the cover, write an intro.
+# Without --parent, add it to src/content/photography.yaml to list it on /photography.
+
+pnpm photos sync   # upload new variants to R2
+git add src && git commit -m "Add Portugal album" && git push   # Pages rebuilds
+```
+
+Photo ids include a content hash, so a re-edited export gets new URLs (safe to cache forever).
+Reference any photo from any post:
+
+```mdx
+<Photo src="greece/img-7785-f44e1767" caption="Markdown *works* here" />
+<Gallery album="greece" />
+<Gallery photos={[{ src: 'greece/img-7770-c1a1fc43' }, { src: 'greece/img-7607-667fed43', caption: '…' }]} />
+```
+
+## Deploying (one-time setup)
+
+1. **R2**: create a bucket (e.g. `photos`), connect a custom domain such as
+   `photos.jakubsekula.com`, and create an API token with Object Read & Write on it.
+   Put the credentials in `site/.env` (see `.env.example`) and run `pnpm photos sync`.
+2. **Pages**: connect the GitHub repo. Root directory `site`, build command `pnpm build`,
+   output `dist`, env var `PUBLIC_PHOTOS_URL=https://photos.jakubsekula.com`.
+   The build fails on Pages if that variable is missing, rather than shipping broken images.
+
+## Migrating from the old site
+
+All content was scraped from the live Strapi-backed site (its local database copy was out of
+date). The old Next.js pages embed the Strapi records they render, including original upload
+URLs, so `scripts/scrape-live.mjs` rebuilds projects, tools, albums (full-resolution
+originals), the CV and the homepage from them:
+
+```bash
+pnpm scrape:live   # downloads are cached in .cache/, processed photos are reused
+```
+
+It overwrites `src/content` (except the blog) and the migrated assets, so it's a one-off: once
+you start editing content here, don't run it again.

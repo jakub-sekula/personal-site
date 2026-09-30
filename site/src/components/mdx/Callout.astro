@@ -1,0 +1,14 @@
+---
+interface Props {
+  type?: 'note' | 'tip' | 'warning';
+  title?: string;
+}
+
+const { type = 'note', title } = Astro.props;
+const accent = { note: 'border-js-blue', tip: 'border-js-green', warning: 'border-js-yellow' }[type];
+---
+
+<aside class:list={['not-prose my-6 rounded-r-md border-l-4 bg-text/5 dark:bg-darktext/5 px-5 py-4', accent]}>
+  {title && <p class="mb-1 font-semibold">{title}</p>}
+  <div class="prose-sm prose dark:prose-invert [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"><slot /></div>
+</aside>

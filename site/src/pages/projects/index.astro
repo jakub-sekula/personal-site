@@ -1,0 +1,70 @@
+---
+// Port of the old app/projects/page.tsx + ProjectsList.tsx (type filter buttons + cards).
+import { getEntries } from 'astro:content';
+import { Image } from 'astro:assets';
+import Page from '../../layouts/Page.astro';
+import PageWrapper from '../../components/PageWrapper.astro';
+import Tag from '../../components/common/Tag.astro';
+import { getProjects } from '../../lib/content';
+
+const projects = await Promise.all(
+  (await getProjects()).map(async (project) => ({ project, tools: await getEntries(project.data.tools) })),
+);
+const filters = ['All projects', ...new Set(projects.map(({ project }) => project.data.type))];
+---
+
+<Page title="Projects - Jakub Sekula" description="Projects homepage">
+  <PageWrapper title="My projects">
+    <div class="col-span-full flex justify-center gap-3" id="project-filters">
+      {
+        filters.map((filter, i) => (
+          <button
+            data-filter={filter}
+            class:list={['rounded-card w-36  px-4 py-2 text-sm transition-all  ease-out hover:-translate-y-px', i === 0 && 'outline outline-js-yellow']}
+          >
+            {filter}
+          </button>
+        ))
+      }
+    </div>
+    {
+      projects.map(({ project, tools }) => (
+        <a
+          href={`/projects/${project.id}`}
+          data-type={project.data.type}
+          class="rounded-card hover-group group relative col-span-full flex w-full cursor-pointer
+              flex-col overflow-hidden p-3 transition-all ease-in-out hover:-translate-y-1 md:col-span-4"
+        >
+          <Image
+            src={project.data.cover}
+            alt={project.data.title}
+            widths={[500, 750, 1000]}
+            sizes="(min-width: 1350px) 430px, (min-width: 768px) 33vw, 100vw"
+            loading="eager"
+            class="aspect-video w-full rounded-sm object-cover"
+          />
+          <h2 class="animate-underline mb-2 mt-3 w-fit font-heading text-xl font-semibold">{project.data.title}</h2>
+          <h3 class="mb-4 text-sm font-light">{project.data.excerpt}</h3>
+          <div class="mt-auto flex w-full flex-wrap gap-2">
+            {tools.map((tool) => <Tag title={tool.data.name} />)}
+          </div>
+        </a>
+      ))
+    }
+  </PageWrapper>
+</Page>
+
+<script>
+  const buttons = document.querySelectorAll<HTMLButtonElement>('#project-filters button');
+  const cards = document.querySelectorAll<HTMLElement>('a[data-type]');
+  buttons.forEach((button) =>
+    button.addEventListener('click', () => {
+      const filter = button.dataset.filter!;
+      buttons.forEach((b) => {
+        b.classList.toggle('outline', b === button);
+        b.classList.toggle('outline-js-yellow', b === button);
+      });
+      cards.forEach((card) => (card.hidden = filter !== 'All projects' && card.dataset.type !== filter));
+    }),
+  );
+</script>

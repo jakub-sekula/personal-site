@@ -1,0 +1,30 @@
+---
+import type { GetStaticPaths } from 'astro';
+import Page from '../../layouts/Page.astro';
+import PageWrapper from '../../components/PageWrapper.astro';
+import ProjectCard from '../../components/common/ProjectCard.astro';
+import BlogPostCard from '../../components/blog/BlogPostCard.astro';
+import { getTags } from '../../lib/content';
+
+export const getStaticPaths = (async () => {
+  const tags = await getTags();
+  return [...tags].map(([slug, tag]) => ({ params: { tag: slug }, props: tag }));
+}) satisfies GetStaticPaths;
+
+const { name, posts, projects } = Astro.props;
+---
+
+<Page title={`${name} - Jakub Sekula`} description={`Projects and posts tagged ${name}.`}>
+  <PageWrapper title={name}>
+    {
+      projects.length > 0 && (
+        <div class="col-span-full flex flex-wrap justify-center gap-4">
+          {projects.map((project) => (
+            <ProjectCard project={project} />
+          ))}
+        </div>
+      )
+    }
+    {posts.map((post) => <BlogPostCard post={post} />)}
+  </PageWrapper>
+</Page>

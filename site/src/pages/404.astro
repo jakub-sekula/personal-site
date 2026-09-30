@@ -1,0 +1,12 @@
+---
+// The old not-found page was a bare heading; this keeps the site chrome around it.
+import Page from '../layouts/Page.astro';
+import PageWrapper from '../components/PageWrapper.astro';
+import Hyperlink from '../components/common/Hyperlink.astro';
+---
+
+<Page title="Not found - Jakub Sekula">
+  <PageWrapper title="Oops, not found!">
+    <Hyperlink title="Go to the homepage" href="/" class="col-span-full mx-auto" />
+  </PageWrapper>
+</Page>

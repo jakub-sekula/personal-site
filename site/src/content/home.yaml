@@ -1,0 +1,30 @@
+- id: home
+  headline: Hi there, I'm Jakub 👋🏻
+  avatar: ../assets/home/avatar.png
+  background: ../assets/home/hero.jpg
+  socials:
+    - name: Github
+      url: https://github.com/jakub-sekula
+      icon: ../assets/home/github-icon.svg
+    - name: LinkedIn
+      url: https://linkedin.com/in/jakub-sekula
+      icon: ../assets/home/linkedin-icon.svg
+  about: |-
+    I am a highly motivated person who always strives to improve his skills and competencies. I work well under pressure and am able to produce high quality work even under strict deadlines. I integrate easily into a team, but I can also work and manage my time unsupervised.
+
+    I am inquisitive and enjoy learning new skills in areas such as mechanical design, electronics, and software development.
+  projects:
+    - title: Engineering & DIY
+      projects:
+        - disco-cube
+        - pallet-coasters
+        - wind-tunnel
+  skills: []
+  photography:
+    - featured
+    - monochrom
+    - places
+    - portraits
+    - analogue
+    - experiments
+  showBlog: false

@@ -1,0 +1,42 @@
+---
+// Port of components/home/AboutSection.jsx: bio + latest 3 roles + education, from the CV.
+import { getEntry } from 'astro:content';
+import SectionContainer from './SectionContainer.astro';
+import SectionHeading from '../common/SectionHeading.astro';
+import ExperienceLine from '../cv/ExperienceLine.astro';
+
+interface Props {
+  bio: string;
+}
+
+const { sections } = (await getEntry('cv', 'cv'))!.data;
+const roles = (title: string) =>
+  (sections.find((s) => s.title === title)?.entries ?? []).filter(
+    (e): e is Extract<typeof e, { kind: 'role' }> => e.kind === 'role',
+  );
+const experience = roles('Professional Experience').filter((e) => !e.hidden).slice(0, 3);
+const [education] = roles('Education');
+---
+
+<SectionContainer>
+  <div class="relative grid w-full grid-cols-12 gap-4 md:gap-12  ">
+    <div class="reveal fade-bottom col-span-full flex flex-col gap-4 font-light md:col-span-4">
+      <SectionHeading title="About" color="red" />
+      {Astro.props.bio}
+    </div>
+    <div
+      class="reveal fade-bottom col-span-full flex flex-col  gap-4 md:col-span-4"
+      style="animation-delay: 250ms; transition-delay: 250ms"
+    >
+      <SectionHeading title="Professional Experience" color="green" />
+      {experience.map((entry) => <ExperienceLine summaryView entry={entry} />)}
+    </div>
+    <div
+      class="reveal fade-bottom col-span-full flex flex-col gap-4 md:col-span-4"
+      style="animation-delay: 450ms; transition-delay: 450ms"
+    >
+      <SectionHeading title="Education" color="yellow" />
+      {education && <ExperienceLine summaryView entry={education} />}
+    </div>
+  </div>
+</SectionContainer>

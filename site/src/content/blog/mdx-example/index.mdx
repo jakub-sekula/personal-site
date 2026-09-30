@@ -1,0 +1,54 @@
+---
+title: What you can do in a post
+description: A reference post showing the components available in MDX. Draft, so it only appears in dev.
+date: 2026-09-30
+tags: [meta]
+draft: true
+---
+
+Regular **Markdown** works as usual: lists, [links](https://astro.build), `inline code`, tables and so on.
+
+```python
+# Code blocks are highlighted at build time (Shiki), no JS shipped.
+def ev(aperture: float, shutter: float) -> float:
+    return math.log2(aperture**2 / shutter)
+```
+
+<Callout type="tip" title="Components without imports">
+  `Callout`, `Photo`, `Gallery` and `ExposureCalc` are available in every post
+  (see `src/components/mdx/index.ts`). Anything else can be imported at the top of the file.
+</Callout>
+
+## Photos from the library
+
+A single photo, clickable into the lightbox. Captions are Markdown:
+
+<Photo src="greece/img-7785-f44e1767" caption="Crete, *2022*. From the [Greece album](/photography/greece/)." />
+
+A few hand-picked photos as a justified row:
+
+<Gallery
+  rowHeight={12}
+  photos={[
+    { src: 'greece/img-7770-c1a1fc43' },
+    { src: 'greece/img-7659-bcc1a810' },
+    { src: 'greece/img-7607-667fed43', caption: 'Captions show up in the lightbox' },
+  ]}
+/>
+
+## Interactive bits
+
+Components can ship their own JavaScript, which only loads on pages that use them:
+
+<ExposureCalc />
+
+For a one-off, a plain `<script>` in the post works too:
+
+<p>This page was rendered at build time and you opened it <strong id="ago">just now</strong>.</p>
+
+<script>{`
+  const t0 = Date.now();
+  setInterval(() => {
+    document.getElementById('ago').textContent = Math.round((Date.now() - t0) / 1000) + 's ago';
+  }, 1000);
+`}</script>

@@ -1,0 +1,117 @@
+---
+// Port of the old app/photography/layout.tsx: header, album sidebar, no footer.
+import { getEntry, getEntries } from 'astro:content';
+import Base from './Base.astro';
+import Header from '../components/Header.astro';
+import Icon from '../components/Icon.astro';
+import { isVisible } from '../lib/content';
+
+type Props = Parameters<typeof Base>[0];
+
+const config = (await getEntry('photography', 'photography'))!.data;
+const sidebar = await Promise.all(
+  (await getEntries(config.sidebar)).filter(isVisible).map(async (album) => ({
+    album,
+    children: (await getEntries(album.data.albums)).filter(isVisible),
+  })),
+);
+
+const path = Astro.url.pathname.replace(/\/$/, '');
+const current = path.split('/').at(-1);
+const navLink = 'font-headings relative text-sm font-light uppercase';
+---
+
+<Base {...Astro.props}>
+  <Header />
+  <div class="mx-auto flex h-full min-h-screen w-full max-w-page md:w-screen pt-16">
+    <aside
+      class="hidden h-full w-full max-w-[20%] flex-col gap-6 px-4 py-12 pb-px text-text backdrop-blur-lg transition-all duration-200 dark:bg-darkbg/70 dark:text-darktext md:flex"
+    >
+      <a class:list={[navLink, path === '/photography' ? 'font-semibold' : 'opacity-75']} href="/photography">All albums</a>
+      {
+        sidebar.map(({ album, children }) => {
+          const href = `/photography/${album.id}`;
+          if (children.length === 0) {
+            return <a class:list={[navLink, path === href ? 'font-semibold' : 'opacity-75']} href={href}>{album.data.title}</a>;
+          }
+          // Opens automatically on the parent album's own page (and stays open, see below).
+          const expanded = current === album.id;
+          return (
+            <div class="flex flex-col" data-nested={album.id}>
+              <div class="flex items-center">
+                <a class:list={[navLink, path === href ? 'font-semibold' : 'opacity-75']} href={href}>{album.data.title}</a>
+                <button class="w-full p-1 pl-2" aria-expanded={expanded ? "true" : "false"} aria-label={`Show ${album.data.title} albums`}>
+                  <span class:list={[expanded && 'hidden']} data-down><Icon name="chevron-down" size={14} /></span>
+                  <span class:list={[!expanded && 'hidden']} data-up><Icon name="chevron-up" size={14} /></span>
+                </button>
+              </div>
+              <div
+                class="ease flex origin-top flex-col overflow-hidden transition-all duration-500"
+                style={`max-height: ${expanded ? (children.length + 1) * 28 : 0}px`}
+                data-open-height={(children.length + 1) * 28}
+              >
+                {children.map((child) => (
+                  <a
+                    class:list={[navLink, 'ml-2 mt-3 text-xs', path === `/photography/${child.id}` ? 'font-semibold' : 'opacity-75']}
+                    href={`/photography/${child.id}`}
+                  >
+                    {child.data.title}
+                  </a>
+                ))}
+              </div>
+            </div>
+          );
+        })
+      }
+    </aside>
+    <script is:inline>
+      // The old site kept this sidebar mounted between albums (client-side navigation), so an
+      // open dropdown stayed open. Pages are real page loads here, so remember open dropdowns
+      // for this tab and restore them before first paint (no collapse/expand animation).
+      (() => {
+        let open = [];
+        try {
+          open = JSON.parse(sessionStorage.getItem('photography-sidebar-open') || '[]');
+        } catch {}
+        document.querySelectorAll('[data-nested]').forEach((nested) => {
+          const button = nested.querySelector('button');
+          if (button.getAttribute('aria-expanded') === 'true' && !open.includes(nested.dataset.nested)) {
+            open.push(nested.dataset.nested);
+          }
+          if (!open.includes(nested.dataset.nested)) return;
+          const list = nested.querySelector('[data-open-height]');
+          button.setAttribute('aria-expanded', 'true');
+          list.style.maxHeight = list.dataset.openHeight + 'px';
+          nested.querySelector('[data-down]').classList.add('hidden');
+          nested.querySelector('[data-up]').classList.remove('hidden');
+        });
+        try {
+          sessionStorage.setItem('photography-sidebar-open', JSON.stringify(open));
+        } catch {}
+      })();
+    </script>
+    <main class="flex h-full w-full flex-col px-4 pb-4 pt-2 md:max-w-[80%] md:px-0 md:pr-4 md:pt-4 lg:pr-0 lg:pt-0">
+      <slot />
+    </main>
+  </div>
+</Base>
+
+<script>
+  const KEY = 'photography-sidebar-open';
+  document.querySelectorAll<HTMLElement>('[data-nested]').forEach((nested) => {
+    const button = nested.querySelector('button')!;
+    const list = nested.querySelector<HTMLElement>('[data-open-height]')!;
+    button.addEventListener('click', () => {
+      const open = button.getAttribute('aria-expanded') !== 'true';
+      button.setAttribute('aria-expanded', String(open));
+      list.style.maxHeight = `${open ? list.dataset.openHeight : 0}px`;
+      nested.querySelector('[data-down]')!.classList.toggle('hidden', open);
+      nested.querySelector('[data-up]')!.classList.toggle('hidden', !open);
+      try {
+        const ids = new Set<string>(JSON.parse(sessionStorage.getItem(KEY) || '[]'));
+        open ? ids.add(nested.dataset.nested!) : ids.delete(nested.dataset.nested!);
+        sessionStorage.setItem(KEY, JSON.stringify([...ids]));
+      } catch {}
+    });
+  });
+</script>

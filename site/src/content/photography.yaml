@@ -1,0 +1,15 @@
+- id: photography
+  index:
+    - featured
+    - experiments
+    - monochrom
+    - places
+    - analogue
+    - portraits
+  sidebar:
+    - featured
+    - places
+    - analogue
+    - monochrom
+    - experiments
+    - portraits

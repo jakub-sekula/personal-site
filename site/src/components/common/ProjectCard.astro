@@ -1,0 +1,43 @@
+---
+// Port of components/common/ProjectCard.jsx (the small card under "Other projects").
+import type { CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  delay?: number;
+  class?: string;
+}
+
+const { project, delay = 0, class: className } = Astro.props;
+const { title, color, cover, coverSmall } = project.data;
+const colors = {
+  red: ' bg-js-red border-js-red',
+  green: ' bg-js-green border-js-green',
+  blue: '  bg-js-blue border-js-blue',
+  yellow: ' bg-js-yellow border-js-yellow',
+};
+---
+
+<a
+  href={`/projects/${project.id}`}
+  class={`reveal fade-bottom hover-group rounded-card group relative flex grow flex-col overflow-hidden hover:-translate-y-1
+		   md:max-w-[calc(33.333%-1rem)] xl:max-w-[calc(20%-1rem)]  ${className ?? ''}`}
+  style={`animation-delay: ${delay}ms; transition-delay: ${delay}ms`}
+>
+  <div class="aspect-video w-full overflow-hidden lg:aspect-[5/4]">
+    <Image
+      src={coverSmall ?? cover}
+      alt={title}
+      widths={[400, 750]}
+      sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, 100vw"
+      class="h-full w-full object-cover transition-all duration-500 ease-out group-hover:scale-105"
+    />
+  </div>
+  <div class="px-3 py-3 ">
+    <div class="flex justify-between">
+      <h4 class="animate-underline font-heading text-lg font-semibold">{title}</h4>
+      <span class={`${colors[color]} mt-2 inline-block h-3 w-3 shrink-0 rounded-full`}></span>
+    </div>
+  </div>
+</a>

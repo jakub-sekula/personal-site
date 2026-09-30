@@ -1,0 +1,18 @@
+---
+title: Disco Cube
+excerpt: A battery-powered mood light with 96 programmable LEDs in a sleek 3D printed cube housing
+type: Engineering
+color: red
+featured: true
+order: 4
+date: 2023-02-26
+cover: ./cover.jpg
+tags:
+  - Engineering
+  - Programming
+  - Fabrication
+  - Electronics
+  - Prototyping
+---
+
+Disco Cube is a unique and customizable mood light powered by an Arduino-based controller and 96 individually programmable LEDs. Housed in a sleek black cube, each wall of the cube features 16 LEDs that can be programmed to display different colors and animations, creating an immersive visual experience. The cube is powered by two 18650 cells, which provide several hours of battery life, and features a custom soft switch power circuit to hide the power switch. Additionally, four buttons for controlling the mode and brightness are seamlessly integrated behind the LEDs, making them completely invisible. The lamp can be charged via USB-C, offering convenience and flexibility in usage.

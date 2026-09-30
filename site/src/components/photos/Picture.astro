@@ -1,0 +1,33 @@
+---
+import { getPhoto } from '../../lib/photos';
+
+interface Props {
+  src: string; // "<album>/<photoId>"
+  alt: string;
+  sizes: string;
+  class?: string;
+  eager?: boolean;
+  /** Blurred preview behind the image while it loads. Turn off for object-contain images. */
+  placeholder?: boolean;
+}
+
+const { src, alt, sizes, class: className, eager = false, placeholder = true } = Astro.props;
+const photo = getPhoto(src);
+---
+
+<picture>
+  <source type="image/avif" srcset={photo.srcset('avif')} sizes={sizes} />
+  <img
+    src={photo.url(photo.widths[Math.min(1, photo.widths.length - 1)])}
+    srcset={photo.srcset('webp')}
+    sizes={sizes}
+    width={photo.w}
+    height={photo.h}
+    alt={alt}
+    loading={eager ? 'eager' : 'lazy'}
+    fetchpriority={eager ? 'high' : undefined}
+    decoding="async"
+    class:list={[placeholder && 'bg-cover bg-center', className]}
+    style={placeholder ? `background-image: url(${photo.lqip})` : undefined}
+  />
+</picture>

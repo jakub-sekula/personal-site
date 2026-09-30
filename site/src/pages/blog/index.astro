@@ -1,0 +1,66 @@
+---
+// Port of the old app/blog/page.jsx
+import { Image } from 'astro:assets';
+import Page from '../../layouts/Page.astro';
+import PageWrapper from '../../components/PageWrapper.astro';
+import BlogPostCard from '../../components/blog/BlogPostCard.astro';
+import Icon from '../../components/Icon.astro';
+import { getPosts, tagSlug } from '../../lib/content';
+
+const [latest, ...older] = await getPosts();
+const date = (d: Date) => d.toLocaleDateString('en-gb');
+const tagClass = 'rounded-sm bg-darkbg px-2 py-0.5 text-xs text-darktext dark:bg-darktext dark:text-text';
+---
+
+<Page title="Blog - Jakub Sekula" description="A place for my thoughts, projects and random ramblings. Do not take too seriously.">
+  <PageWrapper title="Blog" class="max-w-5xl">
+    {
+      latest ? (
+        <>
+          <div class="hover-group relative col-span-full mb-4 flex flex-col items-center">
+            {latest.data.cover ? (
+              <Image src={latest.data.cover} alt={latest.data.title} widths={[1000, 2000]} sizes="(min-width: 1024px) 1000px, 100vw" class="inset-0 aspect-video h-80 w-full rounded-md object-cover" />
+            ) : (
+              <div class="inset-0 aspect-video h-80 w-full rounded-md bg-text object-cover" />
+            )}
+            <div
+              class="flex flex-col gap-2 border-text/10 bg-white
+              py-4 shadow-text/5 dark:border-darktext/5 dark:bg-darkbg dark:shadow-darktext/[1%]
+              md:-mt-24 md:mb-8 md:w-11/12 md:rounded-md
+              md:border md:p-6 md:shadow-md"
+            >
+              <div class="block text-xs font-light">{date(latest.data.date)}</div>
+              <a
+                href={`/blog/${latest.id}`}
+                class="animate-underline w-fit font-heading text-xl
+                font-semibold capitalize line-clamp-2"
+              >
+                {latest.data.title} <Icon name="arrow-right" size={24} class="inline" />
+              </a>
+              {(latest.data.description ?? latest.body) && (
+                <p class="whitespace-pre-line text-sm font-light line-clamp-2">{latest.data.description ?? latest.body}</p>
+              )}
+              {latest.data.tags.length > 0 && (
+                <ul class="mt-2 flex gap-2">
+                  {latest.data.tags.map((tag) => (
+                    <a href={`/tags/${tagSlug(tag)}`} class={tagClass}>
+                      {tag}
+                    </a>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+          <h4 class="col-span-full mb-4 text-lg">Older posts:</h4>
+          <div class="col-span-full grid grid-cols-12 gap-4 md:gap-5 lg:gap-7">
+            {older.map((post) => (
+              <BlogPostCard post={post} />
+            ))}
+          </div>
+        </>
+      ) : (
+        <p class="col-span-full text-center">There is nothing here yet!</p>
+      )
+    }
+  </PageWrapper>
+</Page>

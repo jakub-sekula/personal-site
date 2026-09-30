@@ -1,0 +1,35 @@
+---
+// Port of the old app/photography/page.tsx
+import { getEntry, getEntries } from 'astro:content';
+import Photography from '../../layouts/Photography.astro';
+import Picture from '../../components/photos/Picture.astro';
+import { isVisible } from '../../lib/content';
+
+const config = (await getEntry('photography', 'photography'))!.data;
+const albums = (await getEntries(config.index)).filter(isVisible);
+---
+
+<Photography title="Photography home - Jakub Sekula Photography" description="Photography homepage">
+  <div class="col-span-full mx-auto grid w-full grid-cols-6 gap-4 md:gap-0">
+    {
+      albums.map((album) => (
+        <a
+          href={`/photography/${album.id}`}
+          class="group relative col-span-full flex aspect-[2.5] w-full items-center justify-center overflow-hidden rounded-sm md:col-span-3 md:aspect-[3/2] md:rounded-none"
+        >
+          <div class="absolute inset-0 bg-black/[15%] opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:opacity-100" />
+          <Picture
+            src={album.data.cover}
+            alt={album.data.title}
+            sizes="(min-width: 768px) 40vw, 100vw"
+            eager
+            class="absolute -z-10 h-full w-full object-cover transition-all duration-500 group-hover:scale-105"
+          />
+          <h3 class="z-10 translate-y-2 font-heading text-5xl font-semibold uppercase text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+            {album.data.title}
+          </h3>
+        </a>
+      ))
+    }
+  </div>
+</Photography>

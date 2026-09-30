@@ -1,0 +1,14 @@
+---
+// Port of the old components/layout/PageWrapper.jsx: page title + 12-column main grid.
+interface Props {
+  title?: string;
+  class?: string;
+}
+
+const { title, class: className } = Astro.props;
+---
+
+{title && <h1 class="mt-6 pt-16 col-span-full text-center font-heading text-3xl font-bold md:mb-6 md:text-4xl lg:text-5xl">{title}</h1>}
+<main class:list={['mx-auto  grid w-full', className ?? 'max-w-page', 'grid-cols-12 gap-6 px-6 mt-6 xl:px-4 2xl:px-0']}>
+  <slot />
+</main>
