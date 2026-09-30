@@ -3,11 +3,11 @@
 Static site built with [Astro](https://docs.astro.build), deployed to Cloudflare (Workers static assets).
 Content lives in this repo as Markdown/MDX/YAML; photos live in a Cloudflare R2 bucket.
 
-It's a backend-less port of the old Next.js + Strapi site and looks the same: the components
-are ported one-to-one, styling is the old Tailwind **v3** config and `globals.css` unchanged
-(`tailwind.config.cjs`, `src/styles/global.css`), and the photo lightbox is the same
-yet-another-react-lightbox, loaded as a small React island on gallery pages only. Like the old
-site it names Albert Sans / Inter / Source Code Pro but doesn't load web fonts.
+It started as a backend-less port of the old Next.js + Strapi site: the components are ported
+one-to-one and the old design tokens live on in `src/styles/global.css` (Tailwind 4, `@theme`).
+Galleries open in [PhotoSwipe](https://photoswipe.com) (`src/components/photos/Lightbox.astro`);
+there's no client-side framework. Like the old site it names Albert Sans / Inter / Source Code
+Pro but doesn't load web fonts.
 
 ```bash
 pnpm install

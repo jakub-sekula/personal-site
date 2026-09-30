@@ -217,7 +217,7 @@ picture > source {
   display: none;
 }
 
-/* Photo descriptions (Markdown) in the lightbox caption. */
+/* Photo descriptions (Markdown) in the lightbox caption (see Lightbox.astro). */
 .lightbox-description a {
   text-decoration: underline;
 }

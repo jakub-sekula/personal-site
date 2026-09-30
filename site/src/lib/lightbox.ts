@@ -1,11 +1,16 @@
 import type { Photo } from './photos';
 
-/** What the lightbox island needs per photo (plain data, serialised into the page). */
+/** What the lightbox needs per photo (plain data, embedded in the page as JSON). */
 export interface LightboxSlide {
+  /** Largest WebP, plus a srcset so PhotoSwipe picks a size for the screen. */
   src: string;
+  srcset: string;
   width: number;
   height: number;
-  srcSet: { src: string; width: number; height: number }[];
+  /** Small version shown instantly while the full image loads. */
+  msrc: string;
+  /** The thumbnail on the page crops the photo (object-cover), for the zoom-in animation. */
+  thumbCropped?: boolean;
   alt?: string;
   title?: string;
   /** Rendered Markdown. */
@@ -17,13 +22,23 @@ export interface LightboxSlide {
 }
 
 export function toSlides(
-  items: { photo: Photo; title?: string; descriptionHtml?: string; href?: string; alt?: string; pageTitle?: string }[],
+  items: {
+    photo: Photo;
+    title?: string;
+    descriptionHtml?: string;
+    href?: string;
+    alt?: string;
+    pageTitle?: string;
+    thumbCropped?: boolean;
+  }[],
 ): LightboxSlide[] {
-  return items.map(({ photo, title, descriptionHtml, href, alt, pageTitle }) => ({
+  return items.map(({ photo, title, descriptionHtml, href, alt, pageTitle, thumbCropped }) => ({
     src: photo.largest,
+    srcset: photo.srcset('webp'),
     width: photo.w,
     height: photo.h,
-    srcSet: photo.widths.map((w) => ({ src: photo.url(w), width: w, height: Math.round((photo.h * w) / photo.w) })),
+    msrc: photo.url(photo.widths[0]),
+    ...(thumbCropped && { thumbCropped }),
     ...(alt && { alt }),
     ...(title && { title }),
     ...(descriptionHtml && { descriptionHtml }),

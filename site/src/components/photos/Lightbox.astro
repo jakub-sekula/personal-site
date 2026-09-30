@@ -1,0 +1,135 @@
+---
+// PhotoSwipe lightbox for a gallery. The gallery markup is plain HTML: any
+// element inside #target with data-slide="<index>" opens that slide.
+//
+// Each photo has its own page. While the lightbox is open, the address bar
+// shows the current photo's page (so it can be copied or shared) and the back
+// button closes the lightbox. Cmd/Ctrl-click still opens the page itself.
+import type { LightboxSlide } from '../../lib/lightbox';
+
+interface Props {
+  target: string;
+  slides: LightboxSlide[];
+}
+
+const { target, slides } = Astro.props;
+// JSON inside <script>: escape "<" so a description can't close the tag.
+const json = JSON.stringify(slides).replace(/</g, '\\u003c');
+---
+
+<script type="application/json" data-lightbox={target} set:html={json} />
+
+<script>
+  import PhotoSwipeLightbox from 'photoswipe/lightbox';
+  import type PhotoSwipe from 'photoswipe';
+  import 'photoswipe/style.css';
+  import type { LightboxSlide } from '../../lib/lightbox';
+
+  function captionHtml(slide: LightboxSlide) {
+    const escape = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+    const parts = [
+      slide.title && `<p class="font-heading text-lg font-semibold">${escape(slide.title)}</p>`,
+      slide.descriptionHtml && `<div class="lightbox-description text-sm font-light opacity-90">${slide.descriptionHtml}</div>`,
+      slide.href && `<a href="${escape(slide.href)}" class="text-xs underline opacity-75 hover:opacity-100">Photo page</a>`,
+    ].filter(Boolean);
+    return parts.join('');
+  }
+
+  function setup(data: HTMLScriptElement) {
+    const root = document.getElementById(data.dataset.lightbox!);
+    if (!root) return;
+    const slides: LightboxSlide[] = JSON.parse(data.textContent!);
+    const tiles = () => root.querySelectorAll<HTMLElement>('[data-slide]');
+
+    const lightbox = new PhotoSwipeLightbox({
+      dataSource: slides.map(({ src, srcset, width, height, msrc, alt, thumbCropped }) => ({ src, srcset, width, height, msrc, alt, thumbCropped })),
+      pswpModule: () => import('photoswipe'),
+      bgOpacity: 0.95,
+      showHideAnimationType: 'zoom',
+    });
+
+    // Zoom in from (and back out to) the thumbnail that was clicked. Album tiles
+    // have a blurred copy behind portrait photos, so use the last <img>.
+    lightbox.addFilter('thumbEl', (thumbEl, _data, index) => {
+      const imgs = tiles()[index]?.querySelectorAll('img');
+      // Without a thumbnail PhotoSwipe falls back to a fade.
+      return (imgs?.length ? imgs[imgs.length - 1] : thumbEl) as HTMLElement;
+    });
+
+    // Caption: title, description and a link to the photo's page.
+    lightbox.on('uiRegister', () => {
+      lightbox.pswp!.ui!.registerElement({
+        name: 'caption',
+        order: 9,
+        isButton: false,
+        appendTo: 'root',
+        onInit: (el: HTMLElement, pswp: PhotoSwipe) => {
+          el.className =
+            'lightbox-caption pswp__hide-on-close pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-6 pt-16 pb-6 text-center text-white [&_a]:pointer-events-auto';
+          const render = () => {
+            const html = captionHtml(slides[pswp.currIndex] ?? ({} as LightboxSlide));
+            el.innerHTML = html ? `<div class="mx-auto flex max-w-3xl flex-col items-center gap-1.5">${html}</div>` : '';
+            el.hidden = !html;
+          };
+          pswp.on('change', render);
+          render();
+        },
+      });
+    });
+
+    // Keep the address bar and tab title on the photo being shown.
+    let pushedHistory = false;
+    let pageTitle = '';
+    const showInUrl = (index: number) => {
+      const slide = slides[index];
+      if (!slide?.href) return;
+      history.replaceState(history.state, '', slide.href);
+      if (slide.pageTitle) document.title = slide.pageTitle;
+    };
+    lightbox.on('change', () => showInUrl(lightbox.pswp!.currIndex));
+    lightbox.on('close', () => {
+      document.title = pageTitle;
+      if (pushedHistory) {
+        pushedHistory = false;
+        history.back(); // back to the page the lightbox was opened from
+      }
+    });
+    // Browser back while open closes the lightbox.
+    window.addEventListener('popstate', () => {
+      if (!pushedHistory) return;
+      pushedHistory = false;
+      document.title = pageTitle;
+      lightbox.pswp?.close();
+    });
+
+    const open = (index: number) => {
+      pageTitle = document.title;
+      if (slides[index]?.href) {
+        history.pushState({ lightbox: true }, '', slides[index].href);
+        pushedHistory = true;
+        showInUrl(index);
+      }
+      lightbox.loadAndOpen(index);
+    };
+
+    root.addEventListener('click', (e) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-slide]');
+      if (!el || !root.contains(el)) return;
+      // Let modified clicks open the photo page (new tab, etc.).
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      open(Number(el.dataset.slide));
+    });
+    // Links already turn Enter into a click; this covers non-link tiles.
+    root.addEventListener('keydown', (e) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-slide]');
+      if (!el || el.tagName === 'A' || !root.contains(el) || (e.key !== 'Enter' && e.key !== ' ')) return;
+      e.preventDefault();
+      open(Number(el.dataset.slide));
+    });
+
+    lightbox.init();
+  }
+
+  document.querySelectorAll<HTMLScriptElement>('script[data-lightbox]').forEach(setup);
+</script>

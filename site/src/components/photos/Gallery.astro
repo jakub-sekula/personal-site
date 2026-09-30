@@ -10,7 +10,7 @@ import { albumPhotos, findPhoto, getPhotoTags, inline, photoPageTitle, tagSlug }
 import { getPhoto } from '../../lib/photos';
 import { toSlides } from '../../lib/lightbox';
 import Picture from './Picture.astro';
-import GalleryLightbox from './GalleryLightbox';
+import Lightbox from './Lightbox.astro';
 
 interface Props {
   album?: string;
@@ -80,5 +80,4 @@ const tileClass = 'group relative block cursor-pointer overflow-hidden rounded-x
   {/* Soaks up leftover space so the last row isn't stretched (a lone photo should fill the width). */}
   {items.length > 1 && <span aria-hidden="true" style="flex-grow: 1000000000" />}
 </div>
-{/* client:idle, not :visible: the island renders nothing until opened, so it never becomes "visible". */}
-<GalleryLightbox client:idle target={id} slides={toSlides(items)} />
+<Lightbox target={id} slides={toSlides(items)} />

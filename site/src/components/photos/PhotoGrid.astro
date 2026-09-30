@@ -6,7 +6,7 @@ import type { AlbumPhoto } from '../../lib/content';
 import { photoPageTitle } from '../../lib/content';
 import { toSlides } from '../../lib/lightbox';
 import Picture from './Picture.astro';
-import GalleryLightbox from './GalleryLightbox';
+import Lightbox from './Lightbox.astro';
 
 interface Props {
   id: string;
@@ -21,7 +21,8 @@ photos.forEach((item, index) => {
   if (index === 0 || item.newSection) sections.push([]);
   sections.at(-1)!.push({ item, index });
 });
-const slides = toSlides(photos.map((p) => ({ ...p, pageTitle: photoPageTitle(p) })));
+// Landscape tiles crop the photo to 3:2; portrait ones show it whole over a blurred copy.
+const slides = toSlides(photos.map((p) => ({ ...p, pageTitle: photoPageTitle(p), thumbCropped: p.photo.w >= p.photo.h })));
 ---
 
 <div id={id} class="contents">
@@ -66,4 +67,4 @@ const slides = toSlides(photos.map((p) => ({ ...p, pageTitle: photoPageTitle(p) 
     ))
   }
 </div>
-{photos.length > 0 && <GalleryLightbox client:idle target={id} slides={slides} />}
+{photos.length > 0 && <Lightbox target={id} slides={slides} />}
