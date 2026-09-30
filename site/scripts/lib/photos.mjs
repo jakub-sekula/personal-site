@@ -21,16 +21,30 @@ export const MANIFEST_DIR = path.join(ROOT, 'src/data/photos');
 export const ALBUM_DIR = path.join(ROOT, 'src/content/albums');
 
 export const WIDTHS = [640, 1280, 1920, 2560];
+
+// Credit and copyright, written into every file (camera EXIF and GPS are still
+// stripped): EXIF Artist/Copyright, plus the XMP fields Google Images shows as
+// Creator, Copyright notice and Credit line. (EXIF text is ASCII-only, hence "(c)".)
+// Photos processed before these were added had them written in place with exiftool.
+export const CREDIT = {
+  name: 'Jakub Sekula',
+  notice: '© Jakub Sekula. All rights reserved.',
+  website: 'https://jakubsekula.com',
+};
+const XMP = `<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/" xmlns:xmpRights="http://ns.adobe.com/xap/1.0/rights/"><dc:creator><rdf:Seq><rdf:li>${CREDIT.name}</rdf:li></rdf:Seq></dc:creator><dc:rights><rdf:Alt><rdf:li xml:lang="x-default">${CREDIT.notice}</rdf:li></rdf:Alt></dc:rights><photoshop:Credit>${CREDIT.name}</photoshop:Credit><xmpRights:Marked>True</xmpRights:Marked><xmpRights:WebStatement>${CREDIT.website}</xmpRights:WebStatement></rdf:Description></rdf:RDF></x:xmpmeta>`;
+const credit = (img) =>
+  img.withExif({ IFD0: { Artist: CREDIT.name, Copyright: CREDIT.notice.replace('©', '(c)') } }).withXmp(XMP);
+
 export const FORMATS = {
-  avif: (img) => img.avif({ quality: 55, effort: 4 }),
-  webp: (img) => img.webp({ quality: 80 }),
+  avif: (img) => credit(img).avif({ quality: 55, effort: 4 }),
+  webp: (img) => credit(img).webp({ quality: 80 }),
 };
 export const IMAGE_EXT = /\.(jpe?g|png|webp|tiff?|avif|heic)$/i;
 
 // Link previews (og:image) are JPEG: WebP/AVIF previews aren't reliable across apps.
 // Must match OG_WIDTH in src/lib/photos.ts.
 export const OG_WIDTH = 1200;
-const encodeOg = (img) => img.jpeg({ quality: 82, mozjpeg: true });
+const encodeOg = (img) => credit(img).jpeg({ quality: 82, mozjpeg: true });
 
 export function slugify(str) {
   return str
@@ -63,7 +77,8 @@ export async function writeManifest(album, manifest) {
  * content hash, so re-running on the same file skips work, and a re-exported
  * edit gets a new id (and new, immutable URLs).
  *
- * Metadata (EXIF, GPS) is stripped from every variant.
+ * Camera metadata (EXIF, GPS) is stripped from every variant; only the credit
+ * and copyright above are written.
  *
  * `input` is a path, or { file, name } to name the photo after something other
  * than the file on disk (e.g. the original upload name).
