@@ -10,6 +10,8 @@
           place: Abiliti
           years: 2023 - present
           logo: ../assets/cv/abiliti-logo.jpeg
+          bullets:
+            - jn
           hidden: true
         - kind: role
           title: Mechanical Engineer
