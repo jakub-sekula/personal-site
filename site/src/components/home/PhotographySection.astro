@@ -4,16 +4,18 @@ import type { CollectionEntry } from 'astro:content';
 import SectionContainer from './SectionContainer.astro';
 import Hyperlink from '../common/Hyperlink.astro';
 import Picture from '../photos/Picture.astro';
+import { withCovers } from '../../lib/content';
 
 interface Props {
   albums: CollectionEntry<'albums'>[];
 }
+const albums = await withCovers(Astro.props.albums);
 ---
 
 <SectionContainer title="Photography">
   <div class="relative grid w-full grid-cols-12 gap-4">
     {
-      Astro.props.albums.map((album) => (
+      albums.map(({ album, cover }) => (
         <a
           href={`/photography/${album.id}`}
           class=" group relative aspect-[2.5] md:aspect-3/2 col-span-full md:col-span-6 xl:col-span-4 flex w-full flex-col items-center
@@ -21,7 +23,7 @@ interface Props {
           style="animation-delay: 0ms; transition-delay: 0ms"
         >
           <Picture
-            src={album.data.cover}
+            src={cover}
             alt={album.data.title}
             sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
             placeholder={false}

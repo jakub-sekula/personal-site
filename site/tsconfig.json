@@ -1,5 +1,13 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  "exclude": ["dist"],
+  "compilerOptions": {
+    // React is only used by the local photo editor (integrations/photo-editor/app).
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "paths": {
+      "@editor/*": ["./integrations/photo-editor/app/*"]
+    }
+  }
 }

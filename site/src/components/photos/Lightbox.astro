@@ -21,11 +21,39 @@ interface Props {
 }
 
 const { target, slides, closeToPage = false } = Astro.props;
-// JSON inside <script>: escape "<" so a description can't close the tag.
+// The JSON goes inside a script tag: escape "<" so a description can't close it.
+// (Don't write the tag itself in comments here: Vite's dependency scan reads
+// .astro files as text and would take it for a real one.)
 const json = JSON.stringify(slides).replace(/</g, '\\u003c');
 ---
 
 <script type="application/json" data-lightbox={target} data-close-to-page={closeToPage ? '' : undefined} set:html={json} />
+
+<script is:inline>
+  // On a slow connection a photo can be clicked before the lightbox script below has
+  // loaded, which would open the photo's own page. Hold that click until it's ready
+  // (it then opens the lightbox on that photo). Runs once however many galleries.
+  window.__lightboxQueue ||= (() => {
+    const queue = { ready: false, pending: null };
+    document.addEventListener(
+      'click',
+      (e) => {
+        if (queue.ready || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        const tile = e.target.closest && e.target.closest('[data-slide]');
+        const link = e.target.closest && e.target.closest('a');
+        if (!tile || (link && link !== tile && tile.contains(link))) return;
+        e.preventDefault();
+        queue.pending = tile;
+        // If the script never arrives (network trouble), go to the photo's page after all.
+        setTimeout(() => {
+          if (!queue.ready && queue.pending === tile && tile.href) location.href = tile.href;
+        }, 6000);
+      },
+      true,
+    );
+    return queue;
+  })();
+</script>
 
 <script>
   import PhotoSwipeLightbox from 'photoswipe/lightbox';
@@ -297,6 +325,9 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
       tile.focus({ preventScroll: true });
     });
     lightbox.on('close', () => {
+      // While it animates closed, let clicks through to the page (another photo
+      // clicked in that moment opens once this one is gone; see open()).
+      if (lightbox.pswp?.element) lightbox.pswp.element.style.pointerEvents = 'none';
       document.title = pageTitle;
       if (!pushedHistory) return;
       pushedHistory = false;
@@ -318,7 +349,14 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
       lightbox.pswp?.close();
     });
 
-    const open = (index: number) => {
+    const open = (index: number, attempt = 0) => {
+      // PhotoSwipe opens one lightbox at a time, and a closing one exists until its
+      // zoom-out animation ends: a click in that moment was silently ignored (after
+      // the address bar had already changed). Open as soon as it's gone instead.
+      if ((window as { pswp?: unknown }).pswp) {
+        if (attempt < 60) setTimeout(() => open(index, attempt + 1), 20);
+        return;
+      }
       pageTitle = document.title;
       openedAt = index;
       if (slides[index]?.href) {
@@ -352,6 +390,7 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
     }
 
     lightbox.init();
+    return { roots, open };
   }
 
   // Group the data blocks: those inside the same [data-lightbox-group] share a lightbox.
@@ -360,5 +399,16 @@ const json = JSON.stringify(slides).replace(/</g, '\\u003c');
     const key = document.getElementById(block.dataset.lightbox!)?.closest('[data-lightbox-group]') ?? block;
     groups.set(key, [...(groups.get(key) ?? []), block]);
   }
-  groups.forEach(setup);
+  const ready = [...groups.values()].map(setup).filter((g): g is NonNullable<typeof g> => !!g);
+
+  // A click that came before this script had loaded (held by the inline script above):
+  // open it now.
+  const queue = (window as { __lightboxQueue?: { ready: boolean; pending: HTMLElement | null } }).__lightboxQueue;
+  if (queue) {
+    queue.ready = true;
+    const tile = queue.pending;
+    queue.pending = null;
+    const group = tile && ready.find((g) => g.roots.some((root) => root.contains(tile)));
+    if (tile && group) group.open(Number(tile.dataset.slide));
+  }
 </script>

@@ -5,16 +5,17 @@ import Base from './Base.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Icon from '../components/Icon.astro';
-import { isVisible } from '../lib/content';
+import { isVisible, withCovers } from '../lib/content';
 import { pagePath } from '../lib/url';
 
 type Props = Parameters<typeof Base>[0];
 
 const config = (await getEntry('photography', 'photography'))!.data;
 const sidebar = await Promise.all(
-  (await getEntries(config.sidebar)).filter(isVisible).map(async (album) => ({
+  // Empty albums and collections (nothing to show yet) are left out.
+  (await withCovers((await getEntries(config.sidebar)).filter(isVisible))).map(async ({ album }) => ({
     album,
-    children: (await getEntries(album.data.albums)).filter(isVisible),
+    children: (await withCovers((await getEntries(album.data.albums)).filter(isVisible))).map((c) => c.album),
   })),
 );
 

@@ -75,7 +75,8 @@ const albums = defineCollection({
     title: z.string(),
     /** Plain text, in the album header. (The MDX body, if any, lays out the album page: see [album].astro.) */
     description: z.string().optional(),
-    cover: photoRef,
+    /** Optional for a collection (an album of albums): it then uses its first album's cover. */
+    cover: photoRef.optional(),
     /** The album header: the cover photo full screen, edge to edge (default), or a banner. */
     hero: z.enum(['full', 'banner']).optional(),
     /** Which part of the cover stays in view when it's cropped (CSS object-position, e.g. "50% 30%"). */
@@ -84,7 +85,10 @@ const albums = defineCollection({
     draft: z.boolean().default(false),
     /** Shown under the description in the album header. */
     tags: z.array(z.string()).default([]),
-    /** Child albums, for a grouping album like "Places". */
+    /**
+     * Makes this album a collection: the albums it groups (one level: a collection
+     * isn't put in another). Shown as tiles on its page and nested in the sidebar.
+     */
     albums: z.array(reference('albums')).default([]),
     // Each photo gets its own page at /photography/<album>/<slug>; every field is optional.
     photos: z

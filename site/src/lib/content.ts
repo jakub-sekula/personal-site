@@ -18,8 +18,30 @@ export async function getProjects() {
 
 type Album = CollectionEntry<'albums'>;
 
+/** Visible albums with something to show (a new, empty collection has nothing yet). */
 export async function getAlbums() {
-  return getCollection('albums', isVisible);
+  const albums = await getCollection('albums', isVisible);
+  const covers = await Promise.all(albums.map(albumCover));
+  return albums.filter((_, i) => covers[i]);
+}
+
+/**
+ * An album's cover photo: its own `cover`; for a collection without one, the
+ * cover of its first album; otherwise its first photo. Undefined when empty.
+ */
+export async function albumCover(album: Album): Promise<string | undefined> {
+  if (album.data.cover) return album.data.cover;
+  for (const child of await getChildAlbums(album)) {
+    const cover = child.data.cover ?? child.data.photos[0]?.src;
+    if (cover) return cover;
+  }
+  return album.data.photos[0]?.src;
+}
+
+/** Albums paired with their cover, leaving out empty ones. */
+export async function withCovers(albums: Album[]) {
+  const covers = await Promise.all(albums.map(albumCover));
+  return albums.flatMap((album, i) => (covers[i] ? [{ album, cover: covers[i] }] : []));
 }
 
 export async function getParentAlbum(album: Album) {

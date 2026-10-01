@@ -3,23 +3,23 @@
 import { getEntry, getEntries } from 'astro:content';
 import Photography from '../../layouts/Photography.astro';
 import Picture from '../../components/photos/Picture.astro';
-import { isVisible } from '../../lib/content';
+import { isVisible, withCovers } from '../../lib/content';
 
 const config = (await getEntry('photography', 'photography'))!.data;
-const albums = (await getEntries(config.index)).filter(isVisible);
+const albums = await withCovers((await getEntries(config.index)).filter(isVisible));
 ---
 
 <Photography title="Photography home - Jakub Sekula Photography" description="Photography homepage">
   <div class="col-span-full mx-auto grid w-full grid-cols-6 gap-4 md:gap-0">
     {
-      albums.map((album) => (
+      albums.map(({ album, cover }) => (
         <a
           href={`/photography/${album.id}`}
           class="group relative col-span-full flex aspect-[2.5] w-full items-center justify-center overflow-hidden rounded-xs md:col-span-3 md:aspect-3/2 md:rounded-none"
         >
           <div class="absolute inset-0 bg-black/15 opacity-0 backdrop-blur-xs transition-all duration-300 group-hover:opacity-100" />
           <Picture
-            src={album.data.cover}
+            src={cover}
             alt={album.data.title}
             sizes="(min-width: 768px) 40vw, 100vw"
             eager

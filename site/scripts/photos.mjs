@@ -15,12 +15,13 @@
 //     differs from the copy there (e.g. after its metadata was updated).
 //     Needs R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET (see .env.example).
 
-import { createHash } from 'node:crypto';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { syncPhotos } from './lib/sync.mjs';
 import {
   IMAGE_EXT,
+  listInParent,
   MANIFEST_DIR,
   OUT_DIR,
   appendPhotos,
@@ -89,12 +90,7 @@ async function add([albumArg, ...inputs]) {
   console.log(`\n${existing ? 'Updated' : 'Created'} src/content/albums/${album}.mdx (+${added} photo(s)).`);
 
   if (values.parent) {
-    const parent = await readAlbum(values.parent);
-    if (!parent) throw new Error(`--parent: no album "${values.parent}"`);
-    if (!parent.doc.has('albums')) parent.doc.set('albums', parent.doc.createNode([]));
-    const children = parent.doc.get('albums');
-    if (!children.items.some((item) => String(item.value ?? item) === album)) children.add(album);
-    await writeAlbum(values.parent, parent);
+    await listInParent(album, values.parent);
     console.log(`Listed it in src/content/albums/${values.parent}.mdx.`);
   }
 
@@ -113,61 +109,14 @@ async function backfill() {
 }
 
 async function sync() {
-  const { S3Client, ListObjectsV2Command, PutObjectCommand } = await import('@aws-sdk/client-s3');
-  const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET } = process.env;
-  if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET) {
-    throw new Error('sync: set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET (e.g. in site/.env)');
-  }
-
-  const s3 = new S3Client({
-    region: 'auto',
-    endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
-    // Newer AWS SDKs add CRC checksums to every request; only send them when S3 requires it.
-    requestChecksumCalculation: 'WHEN_REQUIRED',
-    responseChecksumValidation: 'WHEN_REQUIRED',
+  const result = await syncPhotos({
+    dryRun: values['dry-run'],
+    onProgress: (done, total) => {
+      if (done % 25 === 0 || done === total) console.log(`  uploaded ${done}/${total}`);
+    },
   });
-
-  // Key -> ETag, which for a single-part upload is the MD5 of the contents.
-  const remote = new Map();
-  let token;
-  do {
-    const page = await s3.send(new ListObjectsV2Command({ Bucket: R2_BUCKET, ContinuationToken: token }));
-    page.Contents?.forEach((o) => remote.set(o.Key, o.ETag?.replaceAll('"', '')));
-    token = page.NextContinuationToken;
-  } while (token);
-
-  const local = (await readdir(OUT_DIR, { recursive: true, withFileTypes: true }))
-    .filter((d) => d.isFile() && /\.(avif|webp|jpg)$/.test(d.name))
-    .map((d) => path.relative(OUT_DIR, path.join(d.parentPath, d.name)).split(path.sep).join('/'));
-  const md5 = async (key) => createHash('md5').update(await readFile(path.join(OUT_DIR, key))).digest('hex');
-  const pending = [];
-  for (const key of local) if (!remote.has(key) || remote.get(key) !== (await md5(key))) pending.push(key);
-  const changed = pending.filter((key) => remote.has(key)).length;
-
   console.log(
-    `${local.length} local variant(s), ${remote.size} in bucket: ${pending.length - changed} new and ${changed} changed to upload.`,
-  );
-  if (values['dry-run'] || pending.length === 0) return;
-
-  let done = 0;
-  const queue = [...pending];
-  await Promise.all(
-    Array.from({ length: 8 }, async () => {
-      for (let key; (key = queue.shift()); ) {
-        await s3.send(
-          new PutObjectCommand({
-            Bucket: R2_BUCKET,
-            Key: key,
-            Body: await readFile(path.join(OUT_DIR, key)),
-            ContentType: { avif: 'image/avif', webp: 'image/webp', jpg: 'image/jpeg' }[key.split('.').pop()],
-            // Photo ids include a content hash, so a URL never shows a different photo
-            // (a re-upload only ever changes metadata).
-            CacheControl: 'public, max-age=31536000, immutable',
-          }),
-        );
-        if (++done % 25 === 0 || done === pending.length) console.log(`  uploaded ${done}/${pending.length}`);
-      }
-    }),
+    `${result.local} local variant(s), ${result.remote} in bucket: ${result.added} new and ${result.changed} changed` +
+      (values['dry-run'] ? ' to upload.' : `, ${result.uploaded} uploaded.`),
   );
 }

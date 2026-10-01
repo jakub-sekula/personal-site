@@ -38,9 +38,15 @@ rendering a hole. Anything with `draft: true` shows in `pnpm dev` only.
 ## Photos
 
 Originals never go in git. `pnpm photos add` resizes each one into AVIF + WebP at
-640/1280/1920/2560px plus a 1200px JPEG for link previews (camera data and GPS stripped; your name and copyright added, see `CREDIT` in `scripts/lib/photos.mjs`), writes
-them to `public/photos/` (git-ignored), records dimensions and a blur placeholder in
-`src/data/photos/<album>.json`, and appends the photos to the album file.
+each configured width (640/1280/1920/2560px by default) plus a 1200px JPEG for link previews
+(camera data and GPS stripped; your name and copyright added, see `CREDIT` in
+`scripts/lib/photos.mjs`), writes them to `public/photos/` (local only), records dimensions and a
+blur placeholder in `src/data/photos/<album>.json`, and appends the photos to the album file.
+
+The widths and the AVIF/WebP quality are in `photos.config.json`, edited under **Photo settings**
+in the editor (defaults apply without it). Changes apply to photos added from then on; to remake an
+existing photo at the new sizes, add its original again (in the editor, drop it on its album): same
+file, same photo id and URLs. The editor lists which photos aren't at the current sizes.
 
 ```bash
 # New album (or add more photos to an existing one)
@@ -79,8 +85,17 @@ photos:
 
 ### Photo editor (local)
 
-While `pnpm dev` runs, **http://localhost:4321/dev/photos** lists every album's photos:
+While `pnpm dev` runs, **http://localhost:4321/dev/photos** does everything above without the
+terminal (except committing):
 
+- **New album**: title, address, description, where it's listed (inside Places, or in the
+  photography sidebar and page) and a folder or files of photos. It runs the same pipeline as
+  `pnpm photos add`.
+- **Add photos** to an album with its button, or by dropping files or folders on it; **drag**
+  photos by their ⠿ handle to reorder; **Remove** takes one out of the album (its files stay).
+- **Settings** per album: title, date, description, listing, header (full screen or banner),
+  cover crop, draft.
+- **Upload to R2** appears in the toolbar when files aren't in the bucket yet (`pnpm photos sync`).
 - Fill in title, description, tags, alt text and address; each change saves into the album
   file when you leave the field (formatting and comments are kept). Review with `git diff`.
 - Copy a photo's `<Photo>` snippet or name; click thumbnails to select several (in order) and
@@ -88,7 +103,10 @@ While `pnpm dev` runs, **http://localhost:4321/dev/photos** lists every album's 
 - Set an album's cover, filter by album, search by name/title/tag, or show only untitled photos.
 
 It's added by `integrations/photo-editor/` only in dev: it isn't part of the build, and it only
-accepts writes from its own page.
+accepts writes from its own page. The page is a React app built with
+[shadcn/ui](https://ui.shadcn.com) (`integrations/photo-editor/app/`, with its own stylesheet);
+React is only loaded by `astro dev`, so the site itself still ships no framework. Add more
+components with `pnpm dlx shadcn@latest add <name>` (configured in `components.json`).
 
 ### In posts
 

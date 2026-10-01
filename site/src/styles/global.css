@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
+/* The local photo editor has its own stylesheet (integrations/photo-editor/app/editor.css). */
+@source not '../../integrations';
 
 /* Dark mode follows the `dark` class on <html> (set before first paint in Base.astro). */
 @custom-variant dark (&:where(.dark, .dark *));

@@ -10,7 +10,7 @@ import Picture from '../../components/photos/Picture.astro';
 import Cover from '../../components/photos/Cover.astro';
 import PhotoGrid from '../../components/photos/PhotoGrid.astro';
 import { mdxComponents } from '../../components/mdx';
-import { albumName, albumPhotos, getAlbums, getChildAlbums } from '../../lib/content';
+import { albumCover, albumName, albumPhotos, getAlbums, getChildAlbums, getParentAlbum, withCovers } from '../../lib/content';
 import { getPhoto } from '../../lib/photos';
 
 export const getStaticPaths = (async () => {
@@ -24,8 +24,13 @@ const description = album.data.description ?? '';
 const { Content } = await render(album);
 const hasLayout = !!album.body?.trim();
 const fullHero = album.data.hero !== 'banner';
-const children = await getChildAlbums(album);
-const cover = getPhoto(album.data.cover);
+const children = await withCovers(await getChildAlbums(album));
+// getAlbums() only returns albums with a cover (their own, or a fallback).
+const coverSrc = (await albumCover(album))!;
+const cover = getPhoto(coverSrc);
+// Albums in a collection lead back to it.
+const parent = await getParentAlbum(album);
+const back = parent ? { href: `/photography/${parent.id}`, label: `Back to ${parent.data.title}` } : { href: '/photography', label: 'Back to albums' };
 const photos = albumPhotos(album);
 ---
 
@@ -37,10 +42,10 @@ const photos = albumPhotos(album);
   {
     fullHero ? (
       // The cover photo full screen, edge to edge, above the sidebar (`hero: banner` for the old banner).
-      <Cover slot="cover" photo={album.data.cover} position={album.data.coverPosition} eager id="hero-section" class="my-0!">
-        <a href="/photography" class="flex items-center gap-1 text-sm font-light">
+      <Cover slot="cover" photo={coverSrc} position={album.data.coverPosition} eager id="hero-section" class="my-0!">
+        <a href={back.href} class="flex items-center gap-1 text-sm font-light">
           <Icon name="chevron-left" size={16} />
-          Back to albums
+          {back.label}
         </a>
         <h1 class="uppercase">{title}</h1>
         {description && <p>{description}</p>}
@@ -48,11 +53,11 @@ const photos = albumPhotos(album);
     ) : (
       <section class="relative flex h-screen max-h-[400px] max-w-[1920px] items-center justify-center overflow-hidden rounded-xs">
         <div class="absolute inset-0 z-10 h-full bg-linear-to-tr from-darkbg/90"></div>
-        <Picture src={album.data.cover} alt={title} sizes="(min-width: 1350px) 1080px, 100vw" eager class="absolute inset-0 z-0 mx-auto h-full w-full object-cover" />
+        <Picture src={coverSrc} alt={title} sizes="(min-width: 1350px) 1080px, 100vw" eager class="absolute inset-0 z-0 mx-auto h-full w-full object-cover" />
         <div class="z-20 p-6 flex w-full max-w-page flex-col items-center text-white ">
-          <a href="/photography" class="mb-4 flex items-center gap-1 text-sm font-light">
+          <a href={back.href} class="mb-4 flex items-center gap-1 text-sm font-light">
             <Icon name="chevron-left" size={16} />
-            Back to albums
+            {back.label}
           </a>
           <h1
             class="mb-3 wrap-break-word font-heading text-3xl md:text-5xl font-bold
@@ -70,14 +75,14 @@ const photos = albumPhotos(album);
   {
     children.length > 0 && (
       <section class="col-span-full grid w-full max-w-page grid-cols-12 gap-4 py-4">
-        {children.map((child) => (
+        {children.map(({ album: child, cover: childCover }) => (
           <a
             href={`/photography/${child.id}`}
             class="group relative col-span-full md:col-span-4 flex  flex-col items-center justify-center gap-4
                       overflow-hidden rounded-xs aspect-[2.5] md:aspect-3/2 px-3 py-6 font-bold dark:border-0"
           >
             <Picture
-              src={child.data.cover}
+              src={childCover}
               alt={child.data.title}
               sizes="(min-width: 768px) 30vw, 100vw"
               class="absolute -z-10 h-full w-full object-cover transition-transform group-hover:scale-105"
