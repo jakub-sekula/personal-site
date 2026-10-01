@@ -1,4 +1,4 @@
-import { ChevronDown, CloudUpload, FileText, FolderPlus, ImagePlus, Images, Library, PenSquare, Plus, Rocket, Search, Settings2, UserRound } from 'lucide-react';
+import { ChevronDown, CloudUpload, FolderPlus, ImagePlus, Library, Plus, Search, Settings2 } from 'lucide-react';
 import { type Album, type SyncStatus, plural } from '@editor/lib/api';
 import { type PostSummary } from '@editor/lib/content';
 import { Badge } from '@editor/components/ui/badge';
@@ -20,14 +20,12 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from '@editor/components/ui/sidebar';
-import { Tabs, TabsList, TabsTrigger } from '@editor/components/ui/tabs';
 
 export type R2State = { status: 'checking' } | { status: 'ok'; result: SyncStatus } | { status: 'uploading' } | { status: 'error'; message: string };
-export type Section = 'photos' | 'posts' | 'cv';
+export type Section = 'photos' | 'posts' | 'cv' | 'header';
 
 interface Props {
   section: Section;
-  onSection: (section: Section) => void;
   // Photos
   albums: Album[];
   current: string;
@@ -38,7 +36,6 @@ interface Props {
   r2: R2State;
   onUpload: () => void;
   onPhotoSettings: () => void;
-  onPublish: () => void;
   // Posts
   posts: PostSummary[] | null;
   currentPost: string;
@@ -47,33 +44,18 @@ interface Props {
   // CV
   cvSections: string[];
   onJumpCv: (index: number) => void;
+  // Header
+  headerItems: string[];
+  onJumpHeader: (index: number) => void;
 }
 
 export function AppSidebar(props: Props) {
-  const { section, onSection } = props;
+  const { section } = props;
   return (
-    <Sidebar>
+    // Below the editor's top bar (TopBar), which switches between the sections.
+    <Sidebar className="top-(--header-height) h-[calc(100svh-var(--header-height))]!">
+      {(section === 'photos' || section === 'posts') && (
       <SidebarHeader className="gap-3 p-3">
-        <div className="flex items-center gap-2 px-1">
-          <PenSquare className="size-5" />
-          <span className="font-semibold">Site editor</span>
-          <Badge variant="secondary" className="ml-auto">
-            local
-          </Badge>
-        </div>
-        <Tabs value={section} onValueChange={(v) => onSection(v as Section)}>
-          <TabsList className="w-full">
-            <TabsTrigger value="photos">
-              <Images /> Photos
-            </TabsTrigger>
-            <TabsTrigger value="posts">
-              <FileText /> Posts
-            </TabsTrigger>
-            <TabsTrigger value="cv">
-              <UserRound /> CV
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
         {section === 'photos' && (
           <>
             <DropdownMenu>
@@ -103,23 +85,19 @@ export function AppSidebar(props: Props) {
           </Button>
         )}
       </SidebarHeader>
+      )}
       {section === 'photos' && <PhotosNav {...props} />}
       {section === 'posts' && <PostsNav {...props} />}
-      {section === 'cv' && <CvNav {...props} />}
-      <SidebarFooter className="gap-2 border-t p-3 text-xs">
-        {section === 'photos' && (
-          <>
-            <Button size="sm" variant="outline" className="justify-start" onClick={props.onPhotoSettings}>
-              <Settings2 /> Photo settings
-            </Button>
-            <R2Status r2={props.r2} onUpload={props.onUpload} />
-          </>
-        )}
-        <Button size="sm" onClick={props.onPublish}>
-          <Rocket /> Publish
-        </Button>
-        <p className="text-muted-foreground">Edits are saved here as you go; Publish puts them on the live site.</p>
-      </SidebarFooter>
+      {section === 'cv' && <JumpNav label="Sections" titles={props.cvSections} onJump={props.onJumpCv} />}
+      {section === 'header' && <JumpNav label="Items, left to right" titles={props.headerItems} onJump={props.onJumpHeader} />}
+      {section === 'photos' && (
+        <SidebarFooter className="gap-2 border-t p-3 text-xs">
+          <Button size="sm" variant="outline" className="justify-start" onClick={props.onPhotoSettings}>
+            <Settings2 /> Photo settings
+          </Button>
+          <R2Status r2={props.r2} onUpload={props.onUpload} />
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }
@@ -212,16 +190,17 @@ function PostsNav({ posts, currentPost, onSelectPost }: Props) {
   );
 }
 
-function CvNav({ cvSections, onJumpCv }: Props) {
+/** The parts of the page being edited (CV sections, header items); clicking one scrolls to it. */
+function JumpNav({ label, titles, onJump }: { label: string; titles: string[]; onJump: (index: number) => void }) {
   return (
     <SidebarContent>
       <SidebarGroup>
-        <SidebarGroupLabel>Sections</SidebarGroupLabel>
+        <SidebarGroupLabel>{label}</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            {cvSections.map((title, i) => (
+            {titles.map((title, i) => (
               <SidebarMenuItem key={i}>
-                <SidebarMenuButton onClick={() => onJumpCv(i)}>
+                <SidebarMenuButton onClick={() => onJump(i)}>
                   <span className="truncate">{title}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>

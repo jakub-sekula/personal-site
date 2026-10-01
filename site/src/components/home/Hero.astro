@@ -10,9 +10,14 @@ interface Props {
 const { headline, avatar, background, socials } = Astro.props.home;
 ---
 
+{/*
+  Starts at the very top of the page, under the see-through header. (Not pulled up with
+  a negative margin: the part above the page shows, un-tinted, when overscrolling.)
+  `isolate`: the photo multiplies with this section's gradient only.
+*/}
 <section
   id="hero-section"
-  class="relative -mt-16 mb-16 grid w-full grid-cols-12 gap-4 overflow-hidden bg-linear-to-tl from-slate-950 to-slate-800 px-10 py-24 pt-40 md:px-8 xl:min-h-[70vh]"
+  class="relative isolate mb-16 grid w-full grid-cols-12 gap-4 overflow-hidden bg-linear-to-tl from-slate-950 to-slate-800 px-10 py-24 md:px-8 xl:min-h-[calc(70vh-4rem)]"
 >
   <div class="patterned absolute inset-0"></div>
   <Image

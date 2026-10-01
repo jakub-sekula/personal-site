@@ -1,5 +1,5 @@
 // The local site editor (dev only): a small CMS for photos and albums, blog
-// posts and the CV. Every change is written to the files in the repo through
+// posts, the CV and the site header. Every change is written to the files in the repo through
 // the dev API (../api.mjs, ../content-api.mjs); publishing is still commit + push.
 import './editor.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -16,6 +16,7 @@ import { AppSidebar, type R2State, type Section } from './components/AppSidebar'
 import { CollectionView } from './components/CollectionView';
 import { CommandMenu } from './components/CommandMenu';
 import { CvEditor } from './components/CvEditor';
+import { HeaderEditor } from './components/HeaderEditor';
 import { NewAlbumDialog } from './components/NewAlbumDialog';
 import { NewCollectionDialog } from './components/NewCollectionDialog';
 import { NewPostDialog } from './components/NewPostDialog';
@@ -23,6 +24,7 @@ import { PhotoDialog } from './components/PhotoDialog';
 import { PhotoSettingsDialog } from './components/PhotoSettingsDialog';
 import { PublishDialog } from './components/PublishDialog';
 import { PostEditor } from './components/PostEditor';
+import { TopBar } from './components/TopBar';
 import { copy } from './components/shared';
 
 // Saving rewrites content files, and Astro reloads every open page when content
@@ -43,14 +45,14 @@ import.meta.hot?.on('vite:error', (payload: { err?: { message?: string } }) => {
 if (location.pathname.replace(/\/$/, '') === '/dev/photos') history.replaceState(null, '', `/dev${location.hash}`);
 
 // Where you are lives in the address, so a reload comes back to it:
-// #photos/iceland, #posts/my-post, #cv (and plain #iceland from before).
+// #photos/iceland, #posts/my-post, #cv, #header (and plain #iceland from before).
 interface Route {
   section: Section;
   id: string;
 }
 function fromHash(): Route {
   const [first, ...rest] = decodeURIComponent(location.hash.slice(1)).split('/');
-  if (first === 'posts' || first === 'cv' || first === 'photos') return { section: first, id: rest.join('/') };
+  if (first === 'posts' || first === 'cv' || first === 'header' || first === 'photos') return { section: first, id: rest.join('/') };
   return { section: 'photos', id: first };
 }
 const toHash = ({ section, id }: Route) => `#${section}${id ? `/${id}` : ''}`;
@@ -71,7 +73,9 @@ export default function App() {
   const [r2, setR2] = useState<R2State>({ status: 'checking' });
   const [cvSections, setCvSections] = useState<string[]>([]);
   const [cvJump, setCvJump] = useState<{ index: number }>();
-  // Set by the post and CV editors: leaving with unsaved changes asks first.
+  const [headerItems, setHeaderItems] = useState<string[]>([]);
+  const [headerJump, setHeaderJump] = useState<{ index: number }>();
+  // Set by the post, CV and header editors: leaving with unsaved changes asks first.
   const dirty = useRef(false);
 
   const reload = useCallback(async () => {
@@ -125,10 +129,12 @@ export default function App() {
 
   return (
     <TooltipProvider>
-      <SidebarProvider>
+      {/* The top bar spans the width; the sidebar and the page sit below it. */}
+      <SidebarProvider className="flex-col" style={{ '--header-height': '3rem' } as React.CSSProperties}>
+        <TopBar section={route.section} onSection={(section) => go({ section, id: '' })} onPublish={() => setPublishing(true)} />
+        <div className="flex flex-1">
         <AppSidebar
           section={route.section}
-          onSection={(section) => go({ section, id: '' })}
           albums={albums}
           current={album?.id ?? ''}
           onSelect={select}
@@ -136,7 +142,6 @@ export default function App() {
           onNewCollection={() => setNewCollection(true)}
           onSearch={() => setSearch(true)}
           onPhotoSettings={() => setPhotoSettings(true)}
-          onPublish={() => setPublishing(true)}
           r2={r2}
           onUpload={async () => {
             setR2({ status: 'uploading' });
@@ -154,6 +159,8 @@ export default function App() {
           onNewPost={() => setNewPost(true)}
           cvSections={cvSections}
           onJumpCv={(index) => setCvJump({ index })}
+          headerItems={headerItems}
+          onJumpHeader={(index) => setHeaderJump({ index })}
         />
         <SidebarInset className="min-w-0">
           {route.section === 'photos' &&
@@ -190,7 +197,11 @@ export default function App() {
               <p className="p-8 text-muted-foreground">{posts ? 'No posts yet: create one.' : 'Loading…'}</p>
             ))}
           {route.section === 'cv' && <CvEditor jumpTo={cvJump} onSections={setCvSections} onDirtyChange={(d) => (dirty.current = d)} />}
+          {route.section === 'header' && (
+            <HeaderEditor albums={albums} posts={posts} jumpTo={headerJump} onItems={setHeaderItems} onDirtyChange={(d) => (dirty.current = d)} />
+          )}
         </SidebarInset>
+        </div>
       </SidebarProvider>
 
       <PhotoDialog album={album} src={openSrc} onClose={() => setOpenSrc(undefined)} onNavigate={setOpenSrc} reload={reload} />

@@ -1,7 +1,6 @@
 - id: photography
   index:
     - featured
-    - experiments
     - monochrom
     - places
     - analogue
@@ -11,5 +10,4 @@
     - places
     - analogue
     - monochrom
-    - experiments
     - portraits

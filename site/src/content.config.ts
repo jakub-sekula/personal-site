@@ -165,6 +165,37 @@ const cv = defineCollection({
     }),
 });
 
+// The site header's items and what their drop-down menus show (single entry "header").
+const header = defineCollection({
+  loader: file('src/content/header.yaml'),
+  schema: z.object({
+    items: z.array(
+      z.object({
+        label: z.string(),
+        href: z.string(),
+        accent: accent.optional(),
+        /** What the item's menu shows; without one, the item is a plain link. */
+        menu: z.enum(['projects', 'photography', 'blog']).optional(),
+        heading: z.string().optional(),
+        subheading: z.string().optional(),
+        /** The "All …" link at the menu's top right. */
+        allLabel: z.string().optional(),
+        /**
+         * Which projects, albums or posts (ids), in order. Empty: the featured projects,
+         * the photography sidebar's albums, or the latest posts. Missing ids are skipped.
+         */
+        pick: z.array(z.string()).default([]),
+        /** At most this many (projects and posts 4, albums 6 by default). */
+        limit: z.number().int().min(1).max(12).optional(),
+        badge: z.string().optional(),
+        /** Blog menus: a "New" badge while the latest post is under six weeks old. */
+        newBadge: z.boolean().default(true),
+        hidden: z.boolean().default(false),
+      }),
+    ),
+  }),
+});
+
 // Homepage copy and which projects/tools/albums it features (single entry "home").
 const home = defineCollection({
   loader: file('src/content/home.yaml'),
@@ -182,4 +213,4 @@ const home = defineCollection({
     }),
 });
 
-export const collections = { blog, projects, tools, albums, photography, cv, home };
+export const collections = { blog, projects, tools, albums, photography, cv, home, header };

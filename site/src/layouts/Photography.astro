@@ -2,7 +2,7 @@
 // Port of the old app/photography/layout.tsx: header, album sidebar, no footer.
 import { getEntry, getEntries } from 'astro:content';
 import Base from './Base.astro';
-import Header from '../components/Header.astro';
+import SiteHeader from '../components/SiteHeader.astro';
 import Footer from '../components/Footer.astro';
 import Icon from '../components/Icon.astro';
 import { isVisible, withCovers } from '../lib/content';
@@ -29,7 +29,7 @@ const hasCover = Astro.slots.has('cover');
 
 <Base {...Astro.props}>
   {/* A full-screen cover (slot="cover") goes above the sidebar, with the header over it. */}
-  <Header overHero={hasCover} />
+  <SiteHeader overHero={hasCover} />
   <slot name="cover" />
   <div class:list={['mx-auto flex h-full min-h-screen w-full max-w-page md:w-screen', hasCover ? 'pt-4' : 'pt-16']}>
     <aside

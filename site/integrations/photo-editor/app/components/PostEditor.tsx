@@ -46,7 +46,6 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@editor/co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@editor/components/ui/select';
 import { Separator } from '@editor/components/ui/separator';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@editor/components/ui/sheet';
-import { SidebarTrigger } from '@editor/components/ui/sidebar';
 import { Switch } from '@editor/components/ui/switch';
 import { Textarea } from '@editor/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@editor/components/ui/tooltip';
@@ -326,10 +325,8 @@ export function PostEditor({
   );
 
   return (
-    <div className="flex h-svh flex-col">
+    <div className="flex h-[calc(100svh-var(--header-height))] flex-col">
       <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3 md:px-6">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="h-5" />
         <h1 className="truncate text-xl font-semibold tracking-tight">{fields.title || 'Untitled'}</h1>
         {fields.draft && <Badge variant="destructive">Draft</Badge>}
         {fields.format === 'story' && <Badge variant="secondary">Story</Badge>}

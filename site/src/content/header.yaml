@@ -1,0 +1,26 @@
+- id: header
+  items:
+    - label: Projects
+      href: /projects
+      accent: blue
+      menu: projects
+      heading: Things I've designed and built
+      subheading: Software, engineering and everything in between.
+      allLabel: All projects
+    - label: Photography
+      href: /photography
+      accent: green
+      menu: photography
+      heading: Photography
+      subheading: Travel, film and the occasional experiment.
+      allLabel: All albums
+    - label: Blog
+      href: /blog
+      accent: red
+      menu: blog
+      heading: Latest writing
+      allLabel: All posts
+      hidden: true
+    - label: CV
+      href: /cv
+      accent: yellow

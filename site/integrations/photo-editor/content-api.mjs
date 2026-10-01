@@ -1,6 +1,6 @@
-// Dev-only API for the site editor's Posts and CV sections: reads and writes
-// src/content/blog/<slug>/index.mdx and src/content/cv.yaml (frontmatter and YAML
-// formatting preserved where possible). Photos live in ./api.mjs.
+// Dev-only API for the site editor's Posts, CV and Header sections: reads and writes
+// src/content/blog/<slug>/index.mdx, src/content/cv.yaml and src/content/header.yaml
+// (frontmatter and YAML formatting preserved where possible). Photos live in ./api.mjs.
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -227,4 +227,80 @@ export async function uploadCvLogo(req, { name }) {
   await writeFile(path.join(CV_LOGOS, target), Buffer.concat(chunks));
   return { logo: `../assets/cv/${target}`, file: target };
 }
+
+// --- Header ----------------------------------------------------------------------------
+
+const HEADER_FILE = path.join(ROOT, 'src/content/header.yaml');
+const PROJECTS_DIR = path.join(ROOT, 'src/content/projects');
+const PHOTOGRAPHY_FILE = path.join(ROOT, 'src/content/photography.yaml');
+const MENUS = ['projects', 'photography', 'blog'];
+const ACCENTS = ['green', 'yellow', 'blue', 'red'];
+
+/** Projects for the header's pickers, in the projects page's order. */
+async function listProjects() {
+  const projects = [];
+  for (const entry of await readdir(PROJECTS_DIR, { withFileTypes: true })) {
+    const dir = entry.isDirectory() ? entry.name : '';
+    const rel = dir
+      ? ['index.mdx', 'index.md'].map((f) => `${dir}/${f}`).find((f) => existsSync(path.join(PROJECTS_DIR, f)))
+      : /\.mdx?$/.test(entry.name) && entry.name;
+    if (!rel) continue;
+    const [, fm] = (await readFile(path.join(PROJECTS_DIR, rel), 'utf8')).match(FRONTMATTER) ?? [];
+    const data = YAML.parse(fm ?? '') ?? {};
+    const image = data.coverSmall ?? data.cover;
+    projects.push({
+      id: dir || entry.name.replace(/\.mdx?$/, ''),
+      title: data.title ?? dir,
+      type: data.type ?? '',
+      featured: !!data.featured,
+      draft: !!data.draft,
+      order: data.order ?? 0,
+      // Served by Vite in dev, from next to the project's file.
+      cover: typeof image === 'string' ? `/src/content/projects/${path.posix.join(path.posix.dirname(rel), image)}` : '',
+    });
+  }
+  return projects.sort((a, b) => a.order - b.order);
+}
+
+export async function getHeader() {
+  const doc = YAML.parseDocument(await readFile(HEADER_FILE, 'utf8'));
+  const { id, ...header } = doc.contents.items[0].toJSON();
+  const photography = YAML.parse(await readFile(PHOTOGRAPHY_FILE, 'utf8'))?.[0] ?? {};
+  // `sidebar`: the albums a photography menu shows when none are picked.
+  return { header, projects: await listProjects(), sidebar: photography.sidebar ?? [] };
+}
+
+function cleanItem(item) {
+  const label = text(item.label);
+  if (!label) throw new Error('Every header item needs a label');
+  const href = text(item.href);
+  if (!/^(\/|https?:\/\/|mailto:)/.test(href)) throw new Error(`${label}: the link should start with /, https:// or mailto:`);
+  const menu = MENUS.includes(item.menu) ? item.menu : undefined;
+  const limit = Number(item.limit);
+  const pick = [...new Set((item.pick ?? []).map(text).filter(Boolean))];
+  return {
+    label,
+    href,
+    ...(ACCENTS.includes(item.accent) && { accent: item.accent }),
+    ...(menu && {
+      menu,
+      ...(text(item.heading) && { heading: text(item.heading) }),
+      ...(text(item.subheading) && { subheading: text(item.subheading) }),
+      ...(text(item.allLabel) && { allLabel: text(item.allLabel) }),
+      ...(pick.length && { pick }),
+      ...(Number.isInteger(limit) && limit >= 1 && limit <= 12 && { limit }),
+      ...(menu === 'blog' && item.newBadge === false && { newBadge: false }),
+    }),
+    ...(text(item.badge) && { badge: text(item.badge) }),
+    ...(item.hidden && { hidden: true }),
+  };
+}
+
+export const saveHeader = ({ header }) =>
+  exclusive(async () => {
+    const doc = YAML.parseDocument(await readFile(HEADER_FILE, 'utf8'));
+    doc.contents.items[0] = doc.createNode({ id: 'header', items: (header.items ?? []).map(cleanItem) });
+    await writeFile(HEADER_FILE, doc.toString(YAML_OPTIONS));
+    return getHeader();
+  });
 

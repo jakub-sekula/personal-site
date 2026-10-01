@@ -1,5 +1,5 @@
 // The local site editor at /dev (also /dev/photos), only while `astro dev` runs:
-// photos and albums (./api.mjs), blog posts and the CV (./content-api.mjs), all
+// photos and albums (./api.mjs), blog posts, the CV and the header (./content-api.mjs), all
 // saved into the files in the repo. Nothing of this is part of the built site.
 import {
   createCollection,
@@ -19,7 +19,7 @@ import {
   uploadPhoto,
 } from './api.mjs';
 import { publish, publishStatus } from './publish-api.mjs';
-import { createPost, deletePost, getCv, getPost, listPosts, saveCv, savePost, uploadCvLogo, uploadPostImage } from './content-api.mjs';
+import { createPost, deletePost, getCv, getHeader, getPost, listPosts, saveCv, saveHeader, savePost, uploadCvLogo, uploadPostImage } from './content-api.mjs';
 
 async function readJson(req) {
   let body = '';
@@ -57,6 +57,7 @@ const CONTENT = {
     '/posts': async () => ({ posts: await listPosts() }),
     '/post': (params) => getPost(params),
     '/cv': () => getCv(),
+    '/header': () => getHeader(),
     '/publish': () => publishStatus(),
   },
   post: {
@@ -64,6 +65,7 @@ const CONTENT = {
     '/post/create': (body) => createPost(body),
     '/post/delete': (body) => deletePost(body).then(ok),
     '/cv': (body) => saveCv(body),
+    '/header': (body) => saveHeader(body),
   },
   upload: { '/post/image': uploadPostImage, '/cv/logo': uploadCvLogo },
   // Long jobs that report progress: one JSON object per line as they go.

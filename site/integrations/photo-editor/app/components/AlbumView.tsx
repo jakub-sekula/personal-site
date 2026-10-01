@@ -12,8 +12,6 @@ import { Input } from '@editor/components/ui/input';
 import { Label } from '@editor/components/ui/label';
 import { Progress } from '@editor/components/ui/progress';
 import { Switch } from '@editor/components/ui/switch';
-import { SidebarTrigger } from '@editor/components/ui/sidebar';
-import { Separator } from '@editor/components/ui/separator';
 import { cn } from '@editor/lib/utils';
 import { Thumb } from './shared';
 import { AlbumSettingsDialog } from './AlbumSettingsDialog';
@@ -107,7 +105,7 @@ export function AlbumView({ album, albums, reload, openPhoto, selection, toggleS
 
   return (
     <div
-      className="relative flex min-h-svh flex-col"
+      className="relative flex min-h-[calc(100svh-var(--header-height))] flex-col"
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes('Files')) return;
         e.preventDefault();
@@ -121,10 +119,8 @@ export function AlbumView({ album, albums, reload, openPhoto, selection, toggleS
         add(await droppedFiles(e.dataTransfer));
       }}
     >
-      <header className="sticky top-0 z-10 flex flex-col gap-3 border-b bg-background/90 px-4 py-3 backdrop-blur md:px-6">
+      <header className="sticky top-(--header-height) z-10 flex flex-col gap-3 border-b bg-background/90 px-4 py-3 backdrop-blur md:px-6">
         <div className="flex flex-wrap items-center gap-3">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="h-5" />
           <h1 className="text-xl font-semibold tracking-tight">{album.title}</h1>
           <Badge variant="secondary">{plural(album.photos.length, 'photo')}</Badge>
           <Badge variant="outline">{listing}</Badge>

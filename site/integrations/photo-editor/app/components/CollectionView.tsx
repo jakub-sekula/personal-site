@@ -20,8 +20,6 @@ import { Badge } from '@editor/components/ui/badge';
 import { Button } from '@editor/components/ui/button';
 import { Checkbox } from '@editor/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@editor/components/ui/dialog';
-import { Separator } from '@editor/components/ui/separator';
-import { SidebarTrigger } from '@editor/components/ui/sidebar';
 import { cn } from '@editor/lib/utils';
 import { AlbumSettingsDialog } from './AlbumSettingsDialog';
 import { Thumb } from './shared';
@@ -68,10 +66,8 @@ export function CollectionView({ collection, albums, reload, openAlbum, onDelete
   const listing = collection.topLevel ? 'In the sidebar' : 'Not listed';
 
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b bg-background/90 px-4 py-3 backdrop-blur md:px-6">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="h-5" />
+    <div className="flex min-h-[calc(100svh-var(--header-height))] flex-col">
+      <header className="sticky top-(--header-height) z-10 flex flex-wrap items-center gap-3 border-b bg-background/90 px-4 py-3 backdrop-blur md:px-6">
         <h1 className="text-xl font-semibold tracking-tight">{collection.title}</h1>
         <Badge>Collection</Badge>
         <Badge variant="secondary">{plural(children.length, 'album')}</Badge>

@@ -1,0 +1,15 @@
+---
+// Which site header to use: 'mega' (HeaderMega, with the mega menu) or 'classic'
+// (Header, the original). Change it here to switch the whole site.
+import Header from './Header.astro';
+import HeaderMega from './HeaderMega.astro';
+
+const VARIANT: 'mega' | 'classic' = 'mega';
+
+interface Props {
+  /** Transparent over a full-screen photo at the top of the page (#hero-section). */
+  overHero?: boolean;
+}
+---
+
+{VARIANT === 'mega' ? <HeaderMega {...Astro.props} /> : <Header {...Astro.props} />}

@@ -1,14 +1,14 @@
 ---
 // Header + page + footer: the shell every old section layout used (except photography).
 import Base from './Base.astro';
-import Header from '../components/Header.astro';
+import SiteHeader from '../components/SiteHeader.astro';
 import Footer from '../components/Footer.astro';
 
 type Props = Parameters<typeof Base>[0];
 ---
 
 <Base {...Astro.props}>
-  <Header />
+  <SiteHeader />
   <slot />
   <Footer />
 </Base>

@@ -1,4 +1,4 @@
-// Client for the Posts and CV dev API (../../content-api.mjs, at /dev/api/content).
+// Client for the Posts, CV and Header dev API (../../content-api.mjs, at /dev/api/content).
 
 export interface PostSummary {
   slug: string;
@@ -37,6 +37,44 @@ export interface Cv {
   sections: CvSection[];
 }
 
+export type Accent = 'green' | 'yellow' | 'blue' | 'red';
+export type HeaderMenu = 'projects' | 'photography' | 'blog';
+
+/** One item of the site header (src/content/header.yaml). */
+export interface HeaderItem {
+  label: string;
+  href: string;
+  accent?: Accent;
+  /** What its drop-down shows; none: a plain link. */
+  menu?: HeaderMenu;
+  heading?: string;
+  subheading?: string;
+  allLabel?: string;
+  /** Project, album or post ids, in order; empty: the automatic list. */
+  pick?: string[];
+  limit?: number;
+  badge?: string;
+  /** Blog menus: "New" while the latest post is under six weeks old (default on). */
+  newBadge?: boolean;
+  hidden?: boolean;
+}
+
+export interface ProjectSummary {
+  id: string;
+  title: string;
+  type: string;
+  featured: boolean;
+  draft: boolean;
+  cover: string;
+}
+
+export interface HeaderData {
+  header: { items: HeaderItem[] };
+  projects: ProjectSummary[];
+  /** The photography sidebar's albums: what a photography menu shows by default. */
+  sidebar: string[];
+}
+
 const API = '/dev/api/content';
 
 async function json<T>(res: Response): Promise<T> {
@@ -65,3 +103,6 @@ export const uploadPostImage = (slug: string, file: File) => upload<{ path: stri
 export const fetchCv = async () => json<{ cv: Cv; logos: string[] }>(await fetch(`${API}/cv`));
 export const saveCv = (cv: Cv) => post<{ cv: Cv; logos: string[] }>('/cv', { cv });
 export const uploadCvLogo = (file: File) => upload<{ logo: string; file: string }>('/cv/logo', { name: file.name }, file);
+
+export const fetchHeader = async () => json<HeaderData>(await fetch(`${API}/header`));
+export const saveHeader = (header: HeaderData['header']) => post<HeaderData>('/header', { header });

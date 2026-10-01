@@ -8,8 +8,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@editor/components/ui/input';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@editor/components/ui/resizable';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@editor/components/ui/select';
-import { Separator } from '@editor/components/ui/separator';
-import { SidebarTrigger } from '@editor/components/ui/sidebar';
 import { Textarea } from '@editor/components/ui/textarea';
 import { cn } from '@editor/lib/utils';
 import { Field } from './shared';
@@ -215,10 +213,8 @@ export function CvEditor({
   );
 
   return (
-    <div className="flex h-svh flex-col">
+    <div className="flex h-[calc(100svh-var(--header-height))] flex-col">
       <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3 md:px-6">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="h-5" />
         <h1 className="text-xl font-semibold tracking-tight">CV</h1>
         <Badge variant="outline" className="font-mono">
           src/content/cv.yaml

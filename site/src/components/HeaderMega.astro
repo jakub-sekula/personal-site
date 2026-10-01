@@ -1,0 +1,1152 @@
+---
+// Site header with a mega menu, after the tonecarrier shop's header: one shared
+// panel under the bar whose height follows the open item and whose content slides
+// between items; soft highlights on the hovered, open and current item; hides while
+// scrolling down and comes back (frosted) on the way up; a slide-in drawer on phones.
+// The items and what their menus show come from src/content/header.yaml (the Header
+// section of the editor at /dev).
+// The previous header is ./Header.astro; ./SiteHeader.astro picks which one is used.
+//
+// Each item is a link to its section; hovering opens its panel. The chevron beside it is
+// the panel's toggle for keyboard and touch: the APG "disclosure navigation" pattern, a
+// button with aria-expanded/aria-controls. Closed panels are hidden + inert, Escape closes
+// and returns focus to the toggle. Every destination is a plain link in the HTML.
+import { getEntry } from 'astro:content';
+import { Image } from 'astro:assets';
+import Icon from './Icon.astro';
+import Picture from './photos/Picture.astro';
+import { getAlbums, getPosts, getProjects, withCovers } from '../lib/content';
+import { pagePath } from '../lib/url';
+
+interface Props {
+  /** Transparent over a full-screen photo at the top of the page (#hero-section), as on the homepage. */
+  overHero?: boolean;
+}
+
+const pathname = pagePath(Astro.url);
+const overHero = pathname === '/' || !!Astro.props.overHero;
+const section = `/${pathname.split('/')[1]}`;
+
+// --- Items and their menus, from src/content/header.yaml ----------------------
+const NEW_DAYS = 42;
+const LIMIT = { projects: 4, photography: 6, blog: 4 } as const;
+const config = (await getEntry('header', 'header'))!.data;
+const allProjects = await getProjects();
+const allPosts = await getPosts();
+const allAlbums = await getAlbums();
+const sidebar = (await getEntry('photography', 'photography'))!.data.sidebar.map((r) => r.id);
+const freshPost = !!allPosts[0] && Date.now() - allPosts[0].data.date.valueOf() < NEW_DAYS * 86400e3;
+
+/** The picked entries in their order (skipping ids that no longer exist), or the default list. */
+function choose<T extends { id: string }>(all: T[], pick: string[], fallback: () => T[]) {
+  return pick.length ? pick.flatMap((id) => all.find((e) => e.id === id) ?? []) : fallback();
+}
+
+type Albums = Awaited<ReturnType<typeof withCovers>>;
+type Menu =
+  | { kind: 'projects'; projects: typeof allProjects }
+  | { kind: 'photography'; collections: Albums; singles: Albums; all: Albums }
+  | { kind: 'blog'; posts: typeof allPosts };
+
+const items = await Promise.all(
+  config.items
+    .filter((item) => !item.hidden)
+    .map(async (item, i) => {
+      const limit = item.limit ?? (item.menu ? LIMIT[item.menu] : 0);
+      let menu: Menu | undefined;
+      if (item.menu === 'projects') {
+        const projects = choose(allProjects, item.pick, () => allProjects.filter((p) => p.data.featured)).slice(0, limit);
+        if (projects.length) menu = { kind: 'projects', projects };
+      } else if (item.menu === 'photography') {
+        const picked = choose(allAlbums, item.pick, () => sidebar.flatMap((id) => allAlbums.find((a) => a.id === id) ?? []));
+        const all = (await withCovers(picked)).slice(0, limit);
+        const collections = all.filter(({ album }) => album.data.albums.length);
+        const singles = all.filter(({ album }) => !album.data.albums.length);
+        if (all.length) menu = { kind: 'photography', collections, singles, all };
+      } else if (item.menu === 'blog') {
+        const posts = choose(allPosts, item.pick, () => allPosts).slice(0, limit);
+        if (posts.length) menu = { kind: 'blog', posts };
+      }
+      const isNew = item.menu === 'blog' && item.newBadge && freshPost;
+      return {
+        id: String(i),
+        label: item.label,
+        href: item.href,
+        accent: item.accent ? `var(--color-js-${item.accent})` : 'currentColor',
+        badge: item.badge || (isNew ? 'New' : undefined),
+        heading: item.heading,
+        subheading: item.subheading,
+        allLabel: item.allLabel || `All ${item.label.toLowerCase()}`,
+        menu,
+      };
+    }),
+);
+
+const count = (album: Albums[number]['album']) =>
+  album.data.albums.length
+    ? `${album.data.albums.length} album${album.data.albums.length === 1 ? '' : 's'}`
+    : `${album.data.photos.length} photo${album.data.photos.length === 1 ? '' : 's'}`;
+const date = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+---
+
+<mega-header
+  class:list={['mh', overHero && 'mh--hero is-over-hero']}
+  data-hero={overHero ? '' : undefined}
+>
+  <header class="mh__bar" id="site-header">
+    <a href="/" rel="home" class="mh__logo font-mono font-bold">
+      <span class="text-js-yellow">jakubsekula<span class="text-js-blue">@personal</span>:</span><span class="mh__tilde">~</span><span class="text-js-blue">$</span>
+    </a>
+
+    <nav class="mh__nav" aria-label="Main">
+      <ul role="list">
+        {
+          items.map((item) => (
+            <li class="mh__item" data-current={section === item.href ? '' : undefined} style={`--accent: ${item.accent}`}>
+              <a class={item.menu ? 'mh__link mh__link--menu' : 'mh__link'} href={item.href} aria-current={section === item.href ? 'page' : undefined}>
+                {item.label}
+                {item.badge && <span class="mh__badge">{item.badge}</span>}
+              </a>
+              {item.menu && (
+                <button
+                  type="button"
+                  class="mh__toggle"
+                  data-trigger={item.id}
+                  aria-expanded="false"
+                  aria-controls={`mh-pane-${item.id}`}
+                  aria-label={`${item.label} menu`}
+                >
+                  <Icon name="chevron-down" size={14} class="mh__caret" />
+                </button>
+              )}
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="mh__tools">
+      <button type="button" class="mh__icon-btn" data-theme-toggle aria-label="Switch between light and dark">
+        <Icon name="moon-star" size={18} class="hidden dark:block" />
+        <Icon name="sun" size={18} class="block dark:hidden" />
+      </button>
+      <button type="button" class="mh__icon-btn mh__burger" data-burger aria-label="Menu" aria-expanded="false" aria-controls="mh-drawer">
+        <Icon name="menu" size={22} strokeWidth={1.75} />
+      </button>
+    </div>
+  </header>
+
+  {/* One shell for every panel: its height animates to the open panel's. */}
+  <div class="mh__shell" data-shell>
+    {
+      items.map(
+        ({ id, label, href, heading, subheading, allLabel, menu }) =>
+          menu && (
+            <section class="mh__pane" id={`mh-pane-${id}`} aria-label={label} hidden inert>
+              <div class="mh__inner">
+                <div class="mh__lead">
+                  <div>
+                    {heading && <p>{heading}</p>}
+                    {subheading && <p class="mh__lead-sub">{subheading}</p>}
+                  </div>
+                  <a class="mh__all" href={href}>
+                    {allLabel} <Icon name="arrow-right" size={14} />
+                  </a>
+                </div>
+
+                {menu.kind === 'projects' && (
+                  <div class="mh__cards" style={`--cols: ${menu.projects.length}`}>
+                    {menu.projects.map((p) => (
+                      <a class="mh__card" href={`/projects/${p.id}`}>
+                        <span class="mh__thumb">
+                          <Image src={p.data.coverSmall ?? p.data.cover} alt="" widths={[320, 640]} sizes="320px" loading="lazy" />
+                          <span class="mh__pill">{p.data.type}</span>
+                        </span>
+                        <span class="mh__meta">
+                          <span class="mh__title">{p.data.title}</span>
+                          {p.data.excerpt && <span class="mh__caption">{p.data.excerpt}</span>}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                )}
+
+                {menu.kind === 'photography' && (
+                  <div class="mh__groups">
+                    {(
+                      [
+                        ['Collections', menu.collections],
+                        ['Albums', menu.singles],
+                      ] as const
+                    ).map(
+                      ([groupHeading, list]) =>
+                        list.length > 0 && (
+                          <div class="mh__group" style={`flex-grow: ${list.length}`}>
+                            <p class="mh__group-head">{groupHeading}</p>
+                            <div class="mh__cards mh__cards--small" style={`--cols: ${list.length}`}>
+                              {list.map(({ album, cover }) => (
+                                <a class="mh__card" href={`/photography/${album.id}`}>
+                                  <span class="mh__thumb">
+                                    <Picture src={cover} alt="" sizes="240px" />
+                                  </span>
+                                  <span class="mh__meta">
+                                    <span class="mh__title">{album.data.title}</span>
+                                    <span class="mh__caption">{count(album)}</span>
+                                  </span>
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        ),
+                    )}
+                  </div>
+                )}
+
+                {menu.kind === 'blog' && (
+                  <div class="mh__links">
+                    {menu.posts.map((p) => (
+                      <a class="mh__row" href={`/blog/${p.id}`}>
+                        <span class="mh__date">{date(p.data.date)}</span>
+                        <span>
+                          <span class="mh__title">
+                            {p.data.title}
+                            {freshPost && p.id === allPosts[0].id && <span class="mh__badge">New</span>}
+                          </span>
+                          {p.data.description && <span class="mh__caption">{p.data.description}</span>}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          ),
+      )
+    }
+  </div>
+</mega-header>
+
+{/* Phone drawer. Outside the header: the header's frosted background would otherwise trap it. */}
+<mega-drawer class="mh mh-drawer-root">
+  <div class="mh__scrim" data-scrim hidden></div>
+  <aside class="mh__drawer" id="mh-drawer" role="dialog" aria-modal="true" aria-label="Menu" hidden>
+    <div class="mh__drawer-head">
+      <a href="/" rel="home" class="mh__logo font-mono font-bold">
+        <span class="text-js-yellow">jakubsekula<span class="text-js-blue">@personal</span>:</span><span class="mh__tilde">~</span><span class="text-js-blue">$</span>
+      </a>
+      <button type="button" class="mh__icon-btn" data-close aria-label="Close menu">
+        <Icon name="x" size={22} strokeWidth={1.75} />
+      </button>
+    </div>
+    {
+      items.map((item) => {
+        const { menu } = item;
+        const rows =
+          menu?.kind === 'projects'
+            ? menu.projects.map((p) => ({ href: `/projects/${p.id}`, title: p.data.title, sub: p.data.type, image: p.data.coverSmall ?? p.data.cover, photo: undefined }))
+            : menu?.kind === 'photography'
+              ? menu.all.map(({ album, cover }) => ({ href: `/photography/${album.id}`, title: album.data.title, sub: count(album), image: undefined, photo: cover }))
+              : menu?.kind === 'blog'
+                ? menu.posts.map((p) => ({ href: `/blog/${p.id}`, title: p.data.title, sub: date(p.data.date), image: undefined, photo: undefined }))
+                : [];
+        return (
+          <div class="mh__d-group" data-current={section === item.href ? '' : undefined} style={`--accent: ${item.accent}`}>
+            {rows.length ? (
+              <>
+                <button type="button" class="mh__d-toggle" data-accordion aria-expanded="false">
+                  {item.label}
+                  {item.badge && <span class="mh__badge">{item.badge}</span>}
+                  <Icon name="chevron-down" size={16} class="mh__caret" />
+                </button>
+                <div class="mh__d-sub">
+                  <div>
+                    {rows.map((r) => (
+                      <a class="mh__d-row" href={r.href}>
+                        {r.image && <Image src={r.image} alt="" width={88} height={68} class="mh__d-thumb" loading="lazy" />}
+                        {r.photo && <Picture src={r.photo} alt="" sizes="88px" class="mh__d-thumb" />}
+                        <span>
+                          <span class="block">{r.title}</span>
+                          <span class="mh__caption">{r.sub}</span>
+                        </span>
+                      </a>
+                    ))}
+                    <a class="mh__d-row mh__d-all" href={item.href}>
+                      {item.allLabel} <Icon name="arrow-right" size={14} />
+                    </a>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <a class="mh__d-toggle" href={item.href}>
+                {item.label}
+              </a>
+            )}
+          </div>
+        );
+      })
+    }
+    <button type="button" class="mh__d-theme" data-theme-toggle>
+      <span>Theme</span>
+      <span class="flex items-center gap-2">
+        <Icon name="moon-star" size={16} class="hidden dark:block" />
+        <Icon name="sun" size={16} class="block dark:hidden" />
+        <span class="hidden dark:inline">Dark</span><span class="dark:hidden">Light</span>
+      </span>
+    </button>
+  </aside>
+</mega-drawer>
+
+<style>
+  /* ---------------------------------------------------------------- tokens */
+  .mh {
+    --mh-bar: var(--color-lightbg);
+    --mh-panel: #ffffff;
+    --mh-border: rgb(0 0 0 / 0.09);
+    --mh-txt: var(--color-text);
+    --mh-dim: rgb(43 42 42 / 0.62);
+    --mh-hl: rgb(0 0 0 / 0.05);
+    --mh-focus: var(--color-js-blue);
+    --mh-shadow: 0 24px 48px -16px rgb(0 0 0 / 0.18);
+    /* The open menu: frosted glass over the page. */
+    --mh-glass: rgb(250 249 247 / 0.7);
+    --mh-glass-card: rgb(255 255 255 / 0.55);
+    --mh-blur: blur(22px) saturate(150%);
+    --mh-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --mh-height: 3.25rem;
+  }
+  :global(.dark) .mh {
+    --mh-bar: var(--color-darkbg);
+    --mh-panel: hsl(190 12% 8%);
+    --mh-border: rgb(255 255 255 / 0.09);
+    --mh-txt: var(--color-darktext);
+    --mh-dim: hsl(195 22% 80% / 0.62);
+    --mh-hl: rgb(255 255 255 / 0.07);
+    --mh-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.6);
+    --mh-glass: hsl(190 18% 4% / 0.74);
+    --mh-glass-card: rgb(255 255 255 / 0.045);
+    --mh-blur: blur(22px) saturate(140%) brightness(0.6);
+  }
+
+  /* ---------------------------------------------------------------- the bar */
+  mega-header {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 50;
+    display: block;
+    color: var(--mh-txt);
+    transition: top 0.2s ease-out;
+    top: 0;
+  }
+  /* Hidden while scrolling down (top, not transform: a transform would trap fixed descendants). */
+  mega-header.is-hidden {
+    top: calc(-1 * var(--mh-height));
+  }
+
+  .mh__bar {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: stretch;
+    height: var(--mh-height);
+    padding: 0 1.5rem;
+    transition: color 0.3s ease;
+  }
+  /* The background is a layer behind the bar, so it can fade and frost on its own. */
+  .mh__bar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--mh-bar);
+    border-bottom: 1px solid var(--mh-border);
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      -webkit-backdrop-filter 0.3s ease,
+      backdrop-filter 0.3s ease;
+  }
+  mega-header.is-scrolled .mh__bar::before {
+    background: var(--mh-glass);
+    -webkit-backdrop-filter: var(--mh-blur);
+    backdrop-filter: var(--mh-blur);
+  }
+  /* Over a full-screen photo at the top: see-through, white text (until a panel opens). */
+  mega-header.is-over-hero:not(.is-open) .mh__bar {
+    color: #fff;
+  }
+  mega-header.is-over-hero:not(.is-open) .mh__bar::before {
+    background: transparent;
+    border-color: transparent;
+  }
+  mega-header.is-over-hero:not(.is-open) {
+    --mh-hl: rgb(255 255 255 / 0.12);
+  }
+  /* With a panel open, the bar is the same glass, so the two read as one surface. */
+  mega-header.is-open .mh__bar::before {
+    background: var(--mh-glass);
+    -webkit-backdrop-filter: var(--mh-blur);
+    backdrop-filter: var(--mh-blur);
+  }
+
+  .mh__logo {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    margin-right: 2rem;
+  }
+  .mh__tilde {
+    color: currentColor;
+  }
+
+  .mh__nav {
+    display: none;
+    height: 100%;
+  }
+  .mh__nav ul {
+    display: flex;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .mh__item {
+    position: relative;
+    display: flex;
+  }
+  .mh__link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 100%;
+    padding: 0 1rem;
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: inherit;
+    opacity: 0.8;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      opacity 0.15s,
+      background-color 0.15s;
+  }
+  .mh__item {
+    transition: background-color 0.15s;
+  }
+  .mh__item:hover,
+  .mh__item.is-open,
+  .mh__item[data-current] {
+    background: var(--mh-hl);
+  }
+  .mh__item:hover > *,
+  .mh__item.is-open > *,
+  .mh__item[data-current] > * {
+    opacity: 1;
+  }
+  .mh__link--menu {
+    padding-right: 0.15rem;
+  }
+  .mh__toggle {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 0.85rem 0 0.35rem;
+    color: inherit;
+    opacity: 0.8;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  /* The current section: its colour as a bar along the bottom, as the old header had. */
+  .mh__item[data-current]::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 2px;
+    background: var(--accent);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  /* Over a full-screen cover photo, no current-page highlight (it comes back once scrolled past). */
+  mega-header.is-over-hero:not(.is-open) .mh__item[data-current]:not(:hover) {
+    background: transparent;
+  }
+  mega-header.is-over-hero:not(.is-open) .mh__item[data-current]::after {
+    opacity: 0;
+  }
+  .mh__link:focus-visible,
+  .mh__toggle:focus-visible,
+  .mh__icon-btn:focus-visible {
+    outline: 2px solid var(--mh-focus);
+    outline-offset: -2px;
+  }
+  /* (Icons and images come from other components: their classes need :global.) */
+  .mh :global(.mh__caret) {
+    opacity: 0.55;
+    transition: transform 0.18s ease;
+    flex: none;
+  }
+  .mh__item.is-open :global(.mh__caret),
+  .mh__d-group.is-open :global(.mh__caret) {
+    transform: rotate(180deg);
+  }
+  .mh__badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--accent, var(--color-js-blue));
+    padding: 0.1rem 0.35rem;
+    margin-left: 0.15rem;
+  }
+
+  .mh__tools {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: auto;
+  }
+  .mh__icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+  .mh__icon-btn:hover {
+    background: var(--mh-hl);
+  }
+
+  @media (min-width: 768px) {
+    .mh__nav {
+      display: block;
+    }
+    .mh__burger {
+      display: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- shared shell */
+  .mh__shell {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 0;
+    overflow: hidden;
+    background: var(--mh-glass);
+    -webkit-backdrop-filter: var(--mh-blur);
+    backdrop-filter: var(--mh-blur);
+    border-bottom: 1px solid var(--mh-border);
+    box-shadow: var(--mh-shadow);
+    opacity: 0;
+    visibility: hidden;
+    /* Closing: the reverse of opening. */
+    transition:
+      height 0.32s var(--mh-ease),
+      opacity 0.18s ease 0.14s,
+      visibility 0s 0.32s;
+  }
+  mega-header.is-open .mh__shell {
+    opacity: 1;
+    visibility: visible;
+    transition:
+      height 0.3s var(--mh-ease),
+      opacity 0.18s ease;
+  }
+  .mh__pane {
+    position: absolute;
+    inset: 0 0 auto;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 0.24s ease,
+      transform 0.24s ease;
+  }
+  .mh__pane[hidden] {
+    display: none;
+  }
+  .mh__pane.is-active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+  .mh__inner {
+    max-width: var(--container-page);
+    margin: 0 auto;
+    padding: 1.75rem 2rem 2rem;
+  }
+
+  .mh__lead {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-bottom: 1.25rem;
+  }
+  .mh__lead p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+  .mh__lead .mh__lead-sub {
+    margin-top: 0.15rem;
+    font-size: 0.85rem;
+    color: var(--mh-dim);
+  }
+  .mh__all {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    color: var(--mh-dim);
+    transition: color 0.15s;
+  }
+  .mh__all:hover {
+    color: var(--mh-txt);
+  }
+
+  /* ---------------------------------------------------------------- cards */
+  .mh__groups {
+    display: flex;
+    gap: 1.25rem;
+  }
+  .mh__group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex-basis: 0;
+    min-width: 0;
+  }
+  .mh__group-head {
+    margin: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--mh-dim);
+  }
+  .mh__cards {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+  .mh__cards--small {
+    gap: 1rem;
+  }
+  .mh__card {
+    display: block;
+    overflow: hidden;
+    background: var(--mh-glass-card);
+    border: 1px solid var(--mh-border);
+    transition:
+      transform 0.16s ease,
+      border-color 0.16s ease;
+  }
+  .mh__card:hover,
+  .mh__card:focus-visible {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--mh-txt) 30%, transparent);
+  }
+  .mh__card:focus-visible,
+  .mh__row:focus-visible,
+  .mh__all:focus-visible {
+    outline: 2px solid var(--mh-focus);
+    outline-offset: 2px;
+  }
+  .mh__thumb {
+    position: relative;
+    display: block;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: var(--mh-hl);
+  }
+  .mh__cards--small .mh__thumb {
+    aspect-ratio: 3 / 2;
+  }
+  .mh__thumb :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.25s ease;
+  }
+  .mh__card:hover .mh__thumb :global(img) {
+    transform: scale(1.045);
+  }
+  .mh__pill {
+    position: absolute;
+    top: 0.6rem;
+    left: 0.6rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    border-radius: 99px;
+    background: rgb(0 0 0 / 0.6);
+    color: #fff;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+  .mh__meta {
+    display: block;
+    padding: 0.75rem 0.9rem 0.9rem;
+  }
+  .mh__cards--small .mh__meta {
+    padding: 0.6rem 0.75rem 0.7rem;
+  }
+  .mh__title {
+    display: block;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .mh__cards--small .mh__title {
+    font-size: 0.85rem;
+  }
+  .mh__caption {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--mh-dim);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ---------------------------------------------------------------- link list (blog) */
+  .mh__links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.25rem 2rem;
+    max-width: 60rem;
+  }
+  .mh__row {
+    display: flex;
+    gap: 1rem;
+    padding: 0.8rem 0.9rem;
+    transition: background-color 0.14s;
+  }
+  .mh__row:hover {
+    background: var(--mh-hl);
+  }
+  .mh__date {
+    flex: none;
+    width: 5.5rem;
+    padding-top: 0.15rem;
+    font-size: 0.75rem;
+    color: var(--mh-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------------------------------------------------------------- phone drawer */
+  .mh__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgb(0 0 0 / 0.5);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .mh__scrim[hidden],
+  .mh__drawer[hidden] {
+    display: none;
+  }
+  :global(body.mh-drawer-open) .mh__scrim {
+    opacity: 1;
+  }
+  .mh__drawer {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 70;
+    width: min(88vw, 22rem);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background: var(--mh-panel);
+    color: var(--mh-txt);
+    transform: translateX(-102%);
+    transition: transform 0.24s ease;
+  }
+  :global(body.mh-drawer-open) .mh__drawer {
+    transform: translateX(0);
+  }
+  .mh__drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0.75rem 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--mh-border);
+  }
+  .mh__d-group {
+    position: relative;
+    border-bottom: 1px solid var(--mh-border);
+  }
+  .mh__d-group[data-current]::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--accent);
+  }
+  .mh__d-toggle {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 1.25rem;
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: inherit;
+    background: none;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+  }
+  .mh__d-toggle :global(.mh__caret) {
+    margin-left: auto;
+  }
+  .mh__d-sub {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.22s ease;
+  }
+  .mh__d-group.is-open .mh__d-sub {
+    grid-template-rows: 1fr;
+  }
+  .mh__d-sub > div {
+    overflow: hidden;
+  }
+  .mh__d-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 1.25rem 0.55rem 1.5rem;
+    font-size: 0.95rem;
+  }
+  .mh__d-row:hover {
+    background: var(--mh-hl);
+  }
+  .mh__d-row :global(.mh__d-thumb) {
+    width: 2.75rem;
+    height: 2.1rem;
+    flex: none;
+    object-fit: cover;
+    border: 1px solid var(--mh-border);
+  }
+  .mh__d-all {
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+    color: var(--mh-dim);
+    font-size: 0.85rem;
+  }
+  .mh__d-theme {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding: 1.1rem 1.25rem;
+    border-top: 1px solid var(--mh-border);
+    color: inherit;
+    background: none;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  @media (min-width: 768px) {
+    mega-drawer {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    mega-header,
+    .mh__bar::before,
+    .mh__shell,
+    .mh__pane,
+    .mh__card,
+    .mh__thumb :global(img),
+    .mh :global(.mh__caret),
+    .mh__drawer,
+    .mh__d-sub {
+      transition: none !important;
+    }
+  }
+</style>
+
+<script>
+  const REDUCED = matchMedia('(prefers-reduced-motion: reduce)');
+  const HOVER = matchMedia('(hover: hover)');
+
+  /** The bar, the mega menu panels, and hiding on scroll. */
+  class MegaHeader extends HTMLElement {
+    shell!: HTMLElement;
+    panes: HTMLElement[] = [];
+    triggers: HTMLButtonElement[] = [];
+    current: string | null = null;
+    closeTimer?: number;
+    hideTimer?: number;
+    lastY = 0;
+    hero: HTMLElement | null = null;
+    closing: HTMLElement | null = null;
+
+    connectedCallback() {
+      this.shell = this.querySelector('[data-shell]')!;
+      this.panes = [...this.querySelectorAll<HTMLElement>('.mh__pane')];
+      this.triggers = [...this.querySelectorAll<HTMLButtonElement>('[data-trigger]')];
+      this.hero = this.hasAttribute('data-hero') ? document.getElementById('hero-section') : null;
+
+      for (const btn of this.triggers) {
+        const id = `mh-pane-${btn.dataset.trigger}`;
+        const item = btn.closest('.mh__item')!;
+        btn.addEventListener('click', () => (this.current === id ? this.close() : this.open(id)));
+        if (HOVER.matches) {
+          item.addEventListener('mouseenter', () => this.open(id));
+          item.addEventListener('mouseleave', () => this.scheduleClose());
+        }
+      }
+      if (HOVER.matches) {
+        this.shell.addEventListener('mouseenter', () => clearTimeout(this.closeTimer));
+        this.shell.addEventListener('mouseleave', () => this.scheduleClose());
+        // Plain links (CV) close an open panel when hovered, as moving onto another item does.
+        this.querySelectorAll('.mh__item > a:not(.mh__link--menu)').forEach((a) => a.addEventListener('mouseenter', () => this.scheduleClose()));
+      }
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || !this.current) return;
+        const trigger = this.triggerFor(this.current);
+        this.close();
+        trigger?.focus();
+      });
+      document.addEventListener('pointerdown', (e) => {
+        if (this.current && !this.contains(e.target as Node)) this.close();
+      });
+      // The panels come after the whole bar in the page, so Tab would skip them: from an
+      // open item, Tab goes into its panel, and off the panel's last link to the next item.
+      this.addEventListener('keydown', (e) => {
+        if (e.key !== 'Tab' || !this.current) return;
+        const trigger = this.triggerFor(this.current)!;
+        const links = [...this.pane(this.current).querySelectorAll<HTMLElement>('a[href], button')];
+        const active = document.activeElement;
+        if (!links.length) return;
+        if (active === trigger && !e.shiftKey) {
+          e.preventDefault();
+          links[0].focus();
+        } else if (active === links[0] && e.shiftKey) {
+          e.preventDefault();
+          trigger.focus();
+        } else if (active === links.at(-1) && !e.shiftKey) {
+          e.preventDefault();
+          const next =
+            trigger.closest('.mh__item')!.nextElementSibling?.querySelector<HTMLElement>('.mh__link') ??
+            this.querySelector<HTMLElement>('[data-theme-toggle]');
+          this.close();
+          next?.focus();
+        }
+      });
+      this.addEventListener('focusout', () =>
+        requestAnimationFrame(() => {
+          if (this.current && !this.contains(document.activeElement)) this.close();
+        }),
+      );
+
+      // Hide while scrolling down, back on the way up (frosted once past the top).
+      this.lastY = scrollY;
+      addEventListener('scroll', () => this.onScroll(), { passive: true });
+      addEventListener('resize', () => this.onScroll(), { passive: true });
+      this.onScroll();
+    }
+
+    onScroll() {
+      const y = Math.max(scrollY, 0);
+      const bar = this.offsetHeight;
+      const down = y > this.lastY + 4;
+      const up = y < this.lastY - 4;
+      if (Math.abs(y - this.lastY) > 4) this.lastY = y;
+      this.classList.toggle('is-scrolled', y > 8);
+      if (y <= bar) this.classList.remove('is-hidden');
+      else if (down && !this.current) this.classList.add('is-hidden');
+      else if (up) this.classList.remove('is-hidden');
+      // See-through only while the photo is still under the bar.
+      if (this.hero) this.classList.toggle('is-over-hero', y < this.hero.offsetHeight - bar);
+    }
+
+    triggerFor(paneId: string) {
+      return this.triggers.find((t) => `mh-pane-${t.dataset.trigger}` === paneId) ?? null;
+    }
+    pane(id: string) {
+      return this.panes.find((p) => p.id === id)!;
+    }
+
+    open(id: string) {
+      clearTimeout(this.closeTimer);
+      if (this.current === id) return;
+      const next = this.pane(id);
+      const prevId = this.current;
+      this.current = id;
+      // Reopened while closing: a different panel than the one rolling up replaces it.
+      if (this.closing && this.closing !== next) this.hidePane(this.closing);
+      this.closing = null;
+      for (const t of this.triggers) {
+        const owns = `mh-pane-${t.dataset.trigger}` === id;
+        t.setAttribute('aria-expanded', String(owns));
+        t.closest('.mh__item')!.classList.toggle('is-open', owns);
+      }
+      this.classList.add('is-open');
+      clearTimeout(this.hideTimer);
+      next.hidden = false;
+      next.inert = false;
+
+      if (prevId && !REDUCED.matches) {
+        // Slide: the new panel comes in from the side of the item it belongs to.
+        const prev = this.pane(prevId);
+        const dir = this.panes.indexOf(next) > this.panes.indexOf(prev) ? 1 : -1;
+        prev.classList.remove('is-active');
+        prev.inert = true;
+        prev.style.transform = `translateX(${-42 * dir}px)`;
+        this.hideTimer = window.setTimeout(() => {
+          prev.hidden = true;
+          prev.style.transform = '';
+        }, 260);
+        next.style.transition = 'none';
+        next.style.transform = `translateX(${42 * dir}px)`;
+        void next.offsetWidth;
+        next.style.transition = '';
+        next.classList.add('is-active');
+        next.style.transform = '';
+      } else {
+        if (prevId) {
+          const prev = this.pane(prevId);
+          prev.classList.remove('is-active');
+          prev.hidden = true;
+          prev.inert = true;
+        }
+        next.classList.add('is-active');
+      }
+      this.shell.style.height = `${next.offsetHeight}px`;
+    }
+
+    close() {
+      if (!this.current) return;
+      // The panel stays showing while the shell rolls up over it (see .mh__shell).
+      const cur = this.pane(this.current);
+      cur.inert = true;
+      this.closing = cur;
+      clearTimeout(this.hideTimer);
+      this.hideTimer = window.setTimeout(() => {
+        this.hidePane(cur);
+        this.closing = null;
+      }, 340);
+      for (const t of this.triggers) {
+        t.setAttribute('aria-expanded', 'false');
+        t.closest('.mh__item')!.classList.remove('is-open');
+      }
+      this.classList.remove('is-open');
+      this.shell.style.height = '0px';
+      this.current = null;
+    }
+
+    hidePane(pane: HTMLElement) {
+      pane.classList.remove('is-active');
+      pane.hidden = true;
+      pane.inert = true;
+    }
+
+    scheduleClose() {
+      clearTimeout(this.closeTimer);
+      this.closeTimer = window.setTimeout(() => this.close(), 160);
+    }
+  }
+
+  /** The phone drawer: slides in from the left, sections open as accordions. */
+  class MegaDrawer extends HTMLElement {
+    drawer!: HTMLElement;
+    scrim!: HTMLElement;
+    burger: HTMLButtonElement | null = null;
+
+    connectedCallback() {
+      this.drawer = this.querySelector('.mh__drawer')!;
+      this.scrim = this.querySelector('[data-scrim]')!;
+      this.burger = document.querySelector('[data-burger]');
+      this.burger?.addEventListener('click', () => this.openDrawer());
+      this.querySelector('[data-close]')!.addEventListener('click', () => this.closeDrawer());
+      this.scrim.addEventListener('click', () => this.closeDrawer());
+      document.addEventListener('keydown', (e) => e.key === 'Escape' && this.isOpen() && this.closeDrawer());
+      this.querySelectorAll<HTMLButtonElement>('[data-accordion]').forEach((btn) =>
+        btn.addEventListener('click', () => {
+          const open = btn.closest('.mh__d-group')!.classList.toggle('is-open');
+          btn.setAttribute('aria-expanded', String(open));
+        }),
+      );
+      // Keep Tab inside the open drawer.
+      this.drawer.addEventListener('keydown', (e) => {
+        if (e.key !== 'Tab') return;
+        const focusable = [...this.drawer.querySelectorAll<HTMLElement>('a, button')].filter((el) => el.offsetParent !== null);
+        const first = focusable[0];
+        const last = focusable.at(-1)!;
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      });
+    }
+
+    isOpen() {
+      return document.body.classList.contains('mh-drawer-open');
+    }
+
+    openDrawer() {
+      this.drawer.hidden = false;
+      this.scrim.hidden = false;
+      requestAnimationFrame(() => document.body.classList.add('mh-drawer-open'));
+      document.body.style.overflow = 'hidden';
+      this.burger?.setAttribute('aria-expanded', 'true');
+      this.drawer.querySelector<HTMLElement>('[data-close]')?.focus();
+    }
+
+    closeDrawer() {
+      document.body.classList.remove('mh-drawer-open');
+      document.body.style.overflow = '';
+      this.burger?.setAttribute('aria-expanded', 'false');
+      this.burger?.focus();
+      setTimeout(
+        () => {
+          this.drawer.hidden = true;
+          this.scrim.hidden = true;
+        },
+        REDUCED.matches ? 0 : 250,
+      );
+    }
+  }
+
+  if (!customElements.get('mega-header')) customElements.define('mega-header', MegaHeader);
+  if (!customElements.get('mega-drawer')) customElements.define('mega-drawer', MegaDrawer);
+
+  // Light/dark, remembered as before (localStorage "theme").
+  document.querySelectorAll('[data-theme-toggle]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const root = document.documentElement;
+      const next = root.classList.contains('dark') ? 'light' : 'dark';
+      const style = document.createElement('style');
+      style.textContent = '*,*::before,*::after{transition:none!important}';
+      document.head.append(style);
+      root.classList.toggle('dark', next === 'dark');
+      root.style.colorScheme = next;
+      try {
+        localStorage.setItem('theme', next);
+      } catch {}
+      getComputedStyle(document.body);
+      setTimeout(() => style.remove(), 1);
+    }),
+  );
+</script>
