@@ -30,7 +30,10 @@ const canonical = new URL(pagePath(Astro.url), Astro.site);
     {/* EU text-and-data-mining opt-out (TDMRep; also /.well-known/tdmrep.json). */}
     <meta name="tdm-reservation" content="1" />
     <link rel="canonical" href={canonical} />
-    <link rel="icon" href="/favicon.ico" sizes="any" />
+    {/* favicon.ico (16–48px) for old browsers, the 512px PNG for the rest, 180px for iOS home screens. */}
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="512x512" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
