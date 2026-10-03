@@ -1,4 +1,4 @@
-import { FileText, Images, PanelTop, PenSquare, Rocket, UserRound } from 'lucide-react';
+import { FileText, FolderKanban, Images, PanelTop, PenSquare, Rocket, UserRound } from 'lucide-react';
 import { Badge } from '@editor/components/ui/badge';
 import { Button } from '@editor/components/ui/button';
 import { Separator } from '@editor/components/ui/separator';
@@ -10,6 +10,7 @@ import { type Section } from './AppSidebar';
 const SECTIONS: { id: Section; label: string; icon: typeof Images }[] = [
   { id: 'photos', label: 'Photos', icon: Images },
   { id: 'posts', label: 'Posts', icon: FileText },
+  { id: 'projects', label: 'Projects', icon: FolderKanban },
   { id: 'cv', label: 'CV', icon: UserRound },
   { id: 'header', label: 'Header', icon: PanelTop },
 ];

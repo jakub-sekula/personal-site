@@ -9,7 +9,7 @@ import Footer from '../../components/Footer.astro';
 import TableOfContents from '../../components/common/TableOfContents.astro';
 import { mdxComponents } from '../../components/mdx';
 import Picture from '../../components/photos/Picture.astro';
-import Cover from '../../components/photos/Cover.astro';
+import StoryArticle from '../../components/StoryArticle.astro';
 import { getPhoto } from '../../lib/photos';
 import { getPosts, tagSlug } from '../../lib/content';
 
@@ -39,28 +39,9 @@ for (const h of headings) {
   <SiteHeader overHero={story && !!coverPhoto} />
   {
     story && (
-      <main>
-        {coverPhoto ? (
-          <Cover photo={coverPhoto.src} eager id="hero-section" class="my-0!">
-            <p class="text-sm opacity-80">{date}</p>
-            <h1>{post.data.title}</h1>
-            {post.data.description && <p>{post.data.description}</p>}
-          </Cover>
-        ) : (
-          <header class="mx-auto max-w-[42rem] px-6 pt-32">
-            <div class="mb-4 text-sm font-light">{date}</div>
-            <h1 class="font-heading text-5xl font-bold tracking-tight">{post.data.title}</h1>
-            {post.data.description && <p class="mt-4 text-lg font-light opacity-80">{post.data.description}</p>}
-          </header>
-        )}
-        {/* Every photo in the story opens in one lightbox, in reading order. */}
-        <article
-          data-lightbox-group
-          class="story prose max-w-none pt-12 pb-20 font-light md:prose-lg dark:prose-invert prose-headings:font-heading prose-headings:tracking-tight visited:prose-a:text-purple-400 dark:visited:prose-a:text-purple-600"
-        >
-          <Content components={mdxComponents} />
-        </article>
-      </main>
+      <StoryArticle title={post.data.title} description={post.data.description} kicker={date} coverPhoto={coverPhoto?.src}>
+        <Content components={mdxComponents} />
+      </StoryArticle>
     )
   }
   {

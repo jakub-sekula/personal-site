@@ -15,7 +15,8 @@ import { getEntry } from 'astro:content';
 import { Image } from 'astro:assets';
 import Icon from './Icon.astro';
 import Picture from './photos/Picture.astro';
-import { getAlbums, getPosts, getProjects, withCovers } from '../lib/content';
+import ProjectImage from './common/ProjectImage.astro';
+import { getAlbums, getListedProjects, getPosts, getProjectCategories, getProjects, withCovers } from '../lib/content';
 import { pagePath } from '../lib/url';
 
 interface Props {
@@ -32,6 +33,9 @@ const NEW_DAYS = 42;
 const LIMIT = { projects: 4, photography: 6, blog: 4 } as const;
 const config = (await getEntry('header', 'header'))!.data;
 const allProjects = await getProjects();
+const listedProjects = await getListedProjects();
+const categories = new Map((await getProjectCategories()).map((c) => [c.id, c.data.label]));
+const category = (p: (typeof allProjects)[number]) => categories.get(p.data.category.id) ?? p.data.category.id;
 const allPosts = await getPosts();
 const allAlbums = await getAlbums();
 const sidebar = (await getEntry('photography', 'photography'))!.data.sidebar.map((r) => r.id);
@@ -55,7 +59,7 @@ const items = await Promise.all(
       const limit = item.limit ?? (item.menu ? LIMIT[item.menu] : 0);
       let menu: Menu | undefined;
       if (item.menu === 'projects') {
-        const projects = choose(allProjects, item.pick, () => allProjects.filter((p) => p.data.featured)).slice(0, limit);
+        const projects = choose(allProjects, item.pick, () => listedProjects.filter((p) => p.data.featured)).slice(0, limit);
         if (projects.length) menu = { kind: 'projects', projects };
       } else if (item.menu === 'photography') {
         const picked = choose(allAlbums, item.pick, () => sidebar.flatMap((id) => allAlbums.find((a) => a.id === id) ?? []));
@@ -159,12 +163,12 @@ const date = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month:
                     {menu.projects.map((p) => (
                       <a class="mh__card" href={`/projects/${p.id}`}>
                         <span class="mh__thumb">
-                          <Image src={p.data.coverSmall ?? p.data.cover} alt="" widths={[320, 640]} sizes="320px" loading="lazy" />
-                          <span class="mh__pill">{p.data.type}</span>
+                          <ProjectImage project={p} small alt="" widths={[320, 640]} sizes="320px" class="size-full" />
+                          <span class="mh__pill">{category(p)}</span>
                         </span>
                         <span class="mh__meta">
                           <span class="mh__title">{p.data.title}</span>
-                          {p.data.excerpt && <span class="mh__caption">{p.data.excerpt}</span>}
+                          {p.data.description && <span class="mh__caption">{p.data.description}</span>}
                         </span>
                       </a>
                     ))}
@@ -243,7 +247,7 @@ const date = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month:
         const { menu } = item;
         const rows =
           menu?.kind === 'projects'
-            ? menu.projects.map((p) => ({ href: `/projects/${p.id}`, title: p.data.title, sub: p.data.type, image: p.data.coverSmall ?? p.data.cover, photo: undefined }))
+            ? menu.projects.map((p) => ({ href: `/projects/${p.id}`, title: p.data.title, sub: category(p), image: p.data.coverSmall ?? p.data.cover, photo: p.data.cover ? undefined : p.data.coverPhoto }))
             : menu?.kind === 'photography'
               ? menu.all.map(({ album, cover }) => ({ href: `/photography/${album.id}`, title: album.data.title, sub: count(album), image: undefined, photo: cover }))
               : menu?.kind === 'blog'

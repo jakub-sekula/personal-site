@@ -1,0 +1,35 @@
+---
+// A project's cover wherever it's shown: its image file (`coverSmall` first when `small`),
+// else its cover photo from the library, else a plain block in its colour.
+import type { CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
+import Picture from '../photos/Picture.astro';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  /** Prefer the tighter `coverSmall` crop (cards). */
+  small?: boolean;
+  widths: number[];
+  sizes: string;
+  class?: string;
+  eager?: boolean;
+  /** Alt text; empty when the title is right next to it. */
+  alt?: string;
+}
+
+const { project, small = false, widths, sizes, class: className, eager = false, alt = project.data.title } = Astro.props;
+const { cover, coverSmall, coverPhoto, color } = project.data;
+const file = (small && coverSmall) || cover;
+// Written out in full so Tailwind finds them.
+const blank = { green: 'bg-js-green/30', yellow: 'bg-js-yellow/30', blue: 'bg-js-blue/30', red: 'bg-js-red/30' }[color];
+---
+
+{
+  file ? (
+    <Image src={file} alt={alt} widths={widths} sizes={sizes} loading={eager ? 'eager' : 'lazy'} class={className} />
+  ) : coverPhoto ? (
+    <Picture src={coverPhoto} alt={alt} sizes={sizes} eager={eager} class={className} />
+  ) : (
+    <span class:list={[className, 'block', blank]} role="img" aria-label={alt || undefined} />
+  )
+}

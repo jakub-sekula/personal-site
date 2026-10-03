@@ -1,0 +1,43 @@
+---
+// The "story" layout of posts and projects: a full-screen cover photo (or a plain title
+// block without one), then the text, with photos wider than it (see lib/story.ts).
+import Cover from './photos/Cover.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  /** A small line above the title: the date, the category... */
+  kicker?: string;
+  /** "<album>/<photoId>": opens the page full screen. */
+  coverPhoto?: string;
+}
+
+const { title, description, kicker, coverPhoto } = Astro.props;
+---
+
+<main>
+  {
+    coverPhoto ? (
+      <Cover photo={coverPhoto} eager id="hero-section" class="my-0!">
+        {kicker && <p class="text-sm opacity-80">{kicker}</p>}
+        <h1>{title}</h1>
+        {description && <p>{description}</p>}
+      </Cover>
+    ) : (
+      <header class="mx-auto max-w-[42rem] px-6 pt-32">
+        {kicker && <div class="mb-4 text-sm font-light">{kicker}</div>}
+        <h1 class="font-heading text-5xl font-bold tracking-tight">{title}</h1>
+        {description && <p class="mt-4 text-lg font-light opacity-80">{description}</p>}
+      </header>
+    )
+  }
+  <slot name="intro" />
+  {/* Every photo in the story opens in one lightbox, in reading order. */}
+  <article
+    data-lightbox-group
+    class="story prose max-w-none pt-12 pb-20 font-light md:prose-lg dark:prose-invert prose-headings:font-heading prose-headings:tracking-tight visited:prose-a:text-purple-400 dark:visited:prose-a:text-purple-600"
+  >
+    <slot />
+  </article>
+  <slot name="after" />
+</main>

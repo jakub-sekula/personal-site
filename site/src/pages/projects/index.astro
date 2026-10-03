@@ -1,16 +1,22 @@
 ---
-// Port of the old app/projects/page.tsx + ProjectsList.tsx (type filter buttons + cards).
+// Port of the old app/projects/page.tsx + ProjectsList.tsx (category filter buttons + cards).
 import { getEntries } from 'astro:content';
-import { Image } from 'astro:assets';
 import Page from '../../layouts/Page.astro';
 import PageWrapper from '../../components/PageWrapper.astro';
 import Tag from '../../components/common/Tag.astro';
-import { getProjects } from '../../lib/content';
+import ProjectImage from '../../components/common/ProjectImage.astro';
+import { getListedProjects, getProjectCategories } from '../../lib/content';
 
 const projects = await Promise.all(
-  (await getProjects()).map(async (project) => ({ project, tools: await getEntries(project.data.tools) })),
+  (await getListedProjects()).map(async (project) => ({ project, tools: await getEntries(project.data.tools) })),
 );
-const filters = ['All projects', ...new Set(projects.map(({ project }) => project.data.type))];
+// In the categories' own order; only those with projects to show (hidden ones have none).
+const filters = [
+  { id: 'all', label: 'All projects' },
+  ...(await getProjectCategories())
+    .filter((c) => projects.some(({ project }) => project.data.category.id === c.id))
+    .map((c) => ({ id: c.id, label: c.data.label })),
+];
 ---
 
 <Page title="Projects - Jakub Sekula" description="Projects homepage" noindex>
@@ -19,10 +25,10 @@ const filters = ['All projects', ...new Set(projects.map(({ project }) => projec
       {
         filters.map((filter, i) => (
           <button
-            data-filter={filter}
+            data-filter={filter.id}
             class:list={['rounded-card w-36  px-4 py-2 text-sm transition-all  ease-out hover:-translate-y-px', i === 0 && 'outline-solid outline-js-yellow']}
           >
-            {filter}
+            {filter.label}
           </button>
         ))
       }
@@ -31,20 +37,19 @@ const filters = ['All projects', ...new Set(projects.map(({ project }) => projec
       projects.map(({ project, tools }) => (
         <a
           href={`/projects/${project.id}`}
-          data-type={project.data.type}
+          data-type={project.data.category.id}
           class="rounded-card hover-group group relative col-span-full flex w-full cursor-pointer
               flex-col overflow-hidden p-3 transition-all ease-in-out hover:-translate-y-1 md:col-span-4"
         >
-          <Image
-            src={project.data.cover}
-            alt={project.data.title}
+          <ProjectImage
+            project={project}
             widths={[500, 750, 1000]}
             sizes="(min-width: 1350px) 430px, (min-width: 768px) 33vw, 100vw"
-            loading="eager"
+            eager
             class="aspect-video w-full rounded-xs object-cover"
           />
           <h2 class="animate-underline mb-2 mt-3 w-fit font-heading text-xl font-semibold">{project.data.title}</h2>
-          <h3 class="mb-4 text-sm font-light">{project.data.excerpt}</h3>
+          <h3 class="mb-4 text-sm font-light">{project.data.description}</h3>
           <div class="mt-auto flex w-full flex-wrap gap-2">
             {tools.map((tool) => <Tag title={tool.data.name} />)}
           </div>
@@ -64,7 +69,7 @@ const filters = ['All projects', ...new Set(projects.map(({ project }) => projec
         b.classList.toggle('outline-solid', b === button);
         b.classList.toggle('outline-js-yellow', b === button);
       });
-      cards.forEach((card) => (card.hidden = filter !== 'All projects' && card.dataset.type !== filter));
+      cards.forEach((card) => (card.hidden = filter !== 'all' && card.dataset.type !== filter));
     }),
   );
 </script>

@@ -133,7 +133,7 @@ export function HeaderEditor({
     blog: (posts ?? []).map((p) => ({ id: p.slug, title: p.title, sub: p.date, draft: p.draft })),
   };
   const automatic: Record<HeaderMenu, string[]> = {
-    projects: data.projects.filter((p) => p.featured && !p.draft).map((p) => p.id),
+    projects: data.projects.filter((p) => p.featured && !p.draft && p.listed).map((p) => p.id),
     photography: data.sidebar.filter((id) => albums.some((a) => a.id === id && !a.draft)),
     blog: (posts ?? []).filter((p) => !p.draft).map((p) => p.slug),
   };

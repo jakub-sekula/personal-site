@@ -9,9 +9,28 @@ export async function getPosts() {
   return (await getCollection('blog', isVisible)).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 }
 
-/** In the order they had on the old projects page. */
+/** Every visible project (hidden categories too: their pages still exist), in page order. */
 export async function getProjects() {
   return (await getCollection('projects', isVisible)).sort((a, b) => a.data.order - b.data.order);
+}
+
+/** The project categories, in their order. */
+export const getProjectCategories = () => getCollection('projectCategories');
+
+/** The projects to list on the site: those in hidden categories are left out. */
+export async function getListedProjects() {
+  const hidden = new Set((await getProjectCategories()).filter((c) => c.data.hidden).map((c) => c.id));
+  return (await getProjects()).filter((p) => !hidden.has(p.data.category.id));
+}
+
+/** Whether a project is listed (its category isn't hidden). */
+export async function isListed(project: CollectionEntry<'projects'>) {
+  return !(await getProjectCategories()).find((c) => c.id === project.data.category.id)?.data.hidden;
+}
+
+/** A project category's name, e.g. "Software". */
+export async function categoryLabel(project: CollectionEntry<'projects'>) {
+  return (await getProjectCategories()).find((c) => c.id === project.data.category.id)?.data.label ?? project.data.category.id;
 }
 
 // --- Albums ------------------------------------------------------------------
@@ -141,7 +160,7 @@ export function tagSlug(tag: string) {
 
 /** Every tag used by posts or projects, with what it's attached to. */
 export async function getTags() {
-  const [posts, projects] = await Promise.all([getPosts(), getProjects()]);
+  const [posts, projects] = await Promise.all([getPosts(), getListedProjects()]);
   const tags = new Map<string, { name: string; posts: typeof posts; projects: typeof projects }>();
   const entry = (name: string) => {
     const slug = tagSlug(name);

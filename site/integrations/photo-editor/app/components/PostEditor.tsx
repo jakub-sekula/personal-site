@@ -26,7 +26,22 @@ import {
   Upload,
 } from 'lucide-react';
 import { type Album } from '@editor/lib/api';
-import { type Post, deletePost, fetchPost, savePost, uploadPostImage } from '@editor/lib/content';
+import {
+  type Accent,
+  type Category,
+  type Kind,
+  KINDS,
+  type Post,
+  type PostSummary,
+  type Tool,
+  deletePost,
+  fetchCategories,
+  fetchPost,
+  fetchTools,
+  savePost,
+  uploadPostImage,
+} from '@editor/lib/content';
+import { Checkbox } from '@editor/components/ui/checkbox';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,7 +67,26 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@editor/components/ui/t
 import { Field } from './shared';
 import { PhotoPicker } from './PhotoPicker';
 
-type Fields = Pick<Post, 'title' | 'description' | 'date' | 'tags' | 'cover' | 'coverPhoto' | 'format' | 'draft'>;
+// A project is a post with a few extras, edited here too (`kind`).
+type Fields = Pick<
+  Post,
+  | 'title'
+  | 'description'
+  | 'date'
+  | 'tags'
+  | 'cover'
+  | 'coverPhoto'
+  | 'format'
+  | 'draft'
+  | 'category'
+  | 'color'
+  | 'featured'
+  | 'coverSmall'
+  | 'github'
+  | 'demo'
+  | 'tools'
+  | 'posts'
+>;
 const fieldsOf = (p: Post): Fields => ({
   title: p.title,
   description: p.description,
@@ -62,25 +96,52 @@ const fieldsOf = (p: Post): Fields => ({
   coverPhoto: p.coverPhoto,
   format: p.format,
   draft: p.draft,
+  category: p.category,
+  color: p.color,
+  featured: p.featured,
+  coverSmall: p.coverSmall,
+  github: p.github,
+  demo: p.demo,
+  tools: p.tools,
+  posts: p.posts,
 });
+
+// The site's accent colours (--color-js-* in src/styles/global.css).
+const ACCENT_COLORS: Record<Accent, string> = { green: '#44eaa0', yellow: '#fed557', blue: '#59b8df', red: '#f1647b' };
 
 type Picker = { kind: 'photo' | 'row' | 'gallery' | 'side' | 'cover' | 'coverPhoto' } | null;
 
 const dark = () => document.documentElement.classList.contains('dark');
 
 export function PostEditor({
+  kind = 'blog',
   slug,
   albums,
+  posts = [],
   onSaved,
   onDeleted,
   onDirtyChange,
 }: {
+  kind?: Kind;
   slug: string;
   albums: Album[];
+  /** For a project's related posts. */
+  posts?: PostSummary[];
   onSaved: () => void;
   onDeleted: () => void;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
+  const { noun, url, dir } = KINDS[kind];
+  const Noun = noun[0].toUpperCase() + noun.slice(1);
+  const pageUrl = `${url}/${slug}`;
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tools, setTools] = useState<Tool[]>([]);
+  const coverInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (kind !== 'projects') return;
+    fetchCategories().then(setCategories, (e) => toast.error(e.message));
+    fetchTools().then(setTools, (e) => toast.error(e.message));
+  }, [kind]);
   const [post, setPost] = useState<Post | null>(null);
   const [fields, setFields] = useState<Fields | null>(null);
   const [body, setBody] = useState('');
@@ -102,7 +163,7 @@ export function PostEditor({
     setPreviewReady(false);
     (async () => {
       for (let i = 0; i < 25 && !cancelled; i++) {
-        const ok = await fetch(`/blog/${slug}`, { cache: 'no-store' }).then((r) => r.ok, () => false);
+        const ok = await fetch(pageUrl, { cache: 'no-store' }).then((r) => r.ok, () => false);
         if (ok) break;
         await new Promise((r) => setTimeout(r, 400));
       }
@@ -116,7 +177,7 @@ export function PostEditor({
   useEffect(() => {
     setPost(null);
     setError('');
-    fetchPost(slug)
+    fetchPost(kind, slug)
       .then((p) => {
         setPost(p);
         setFields(fieldsOf(p));
@@ -124,7 +185,7 @@ export function PostEditor({
         setSaved({ fields: fieldsOf(p), body: p.body });
       })
       .catch((e) => setError(e.message));
-  }, [slug]);
+  }, [kind, slug]);
 
   const dirty = !!saved && !!fields && (body !== saved.body || JSON.stringify(fields) !== JSON.stringify(saved.fields));
   useEffect(() => {
@@ -135,7 +196,7 @@ export function PostEditor({
     if (!fields || saving) return;
     setSaving(true);
     try {
-      const p = await savePost(slug, fields, body);
+      const p = await savePost(kind, slug, fields, body);
       setPost(p);
       setSaved({ fields: fieldsOf(p), body });
       setFields(fieldsOf(p));
@@ -146,7 +207,7 @@ export function PostEditor({
     } finally {
       setSaving(false);
     }
-  }, [fields, body, slug, saving]);
+  }, [fields, body, kind, slug, saving]);
 
   // ⌘S / Ctrl+S saves.
   useEffect(() => {
@@ -237,9 +298,10 @@ export function PostEditor({
   async function uploadImages(files: File[]) {
     for (const file of files) {
       try {
-        const { path } = await uploadPostImage(slug, file);
+        const { path } = await uploadPostImage(kind, slug, file);
         insertBlock(`![${file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ')}](${path})`);
-        toast.success(`Added ${path.slice(2)} next to the post`);
+        setPost((p) => p && { ...p, images: [...p.images, path.slice(2)] });
+        toast.success(`Added ${path.slice(2)} next to the ${noun}`);
       } catch (e) {
         toast.error((e as Error).message);
       }
@@ -272,7 +334,7 @@ export function PostEditor({
         {tool('Quote', <Quote />, () => prefixLines('> '))}
         {tool('Code', <Code />, () => wrap('`'))}
         <Separator orientation="vertical" className="mx-1 h-5" />
-        {tool('Upload an image (saved next to the post)', <Upload />, () => imageInput.current?.click(), !post.file.includes('/index.'))}
+        {tool(`Upload an image (saved next to the ${noun})`, <Upload />, () => imageInput.current?.click(), !post.file.includes('/index.'))}
         <input ref={imageInput} type="file" accept="image/*" multiple hidden onChange={(e) => uploadImages([...(e.target.files ?? [])]).finally(() => (e.target.value = ''))} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -299,7 +361,7 @@ export function PostEditor({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {!components && <span className="ml-2 text-xs text-muted-foreground">Plain Markdown (.md): photo components need an .mdx post</span>}
+        {!components && <span className="ml-2 text-xs text-muted-foreground">Plain Markdown (.md): photo components need an .mdx {noun}</span>}
       </div>
       <div
         className="min-h-0 flex-1 overflow-auto"
@@ -330,8 +392,15 @@ export function PostEditor({
         <h1 className="truncate text-xl font-semibold tracking-tight">{fields.title || 'Untitled'}</h1>
         {fields.draft && <Badge variant="destructive">Draft</Badge>}
         {fields.format === 'story' && <Badge variant="secondary">Story</Badge>}
+        {kind === 'projects' && (
+          <Badge variant="outline">
+            {categories.find((c) => c.id === fields.category)?.label ?? fields.category}
+            {categories.find((c) => c.id === fields.category)?.hidden && ' (hidden)'}
+          </Badge>
+        )}
+        {fields.featured && <Badge variant="secondary">Featured</Badge>}
         <Badge variant="outline" className="font-mono">
-          {post.file.replace('src/content/blog/', '')}
+          {post.file.replace(`${dir}/`, '')}
         </Badge>
         <span className="text-xs text-muted-foreground">{dirty ? 'Unsaved changes' : 'Saved'}</span>
         <div className="ml-auto flex flex-wrap gap-2">
@@ -342,7 +411,7 @@ export function PostEditor({
             <PanelRight /> Preview
           </Button>
           <Button size="sm" variant="outline" asChild>
-            <a href={`/blog/${slug}`} target="_blank">
+            <a href={pageUrl} target="_blank">
               <ExternalLink /> View
             </a>
           </Button>
@@ -363,7 +432,7 @@ export function PostEditor({
               <div className="flex h-full flex-col">
                 <div className="flex items-center gap-2 border-b px-3 py-1.5 text-xs text-muted-foreground">
                   <span className="truncate">
-                    /blog/{slug} {dirty ? '· shows the last save' : ''}
+                    {pageUrl} {dirty ? '· shows the last save' : ''}
                   </span>
                   <Button size="icon" variant="ghost" className="ml-auto size-7" aria-label="Reload preview" onClick={() => setPreviewKey((k) => k + 1)}>
                     <RefreshCw />
@@ -371,7 +440,7 @@ export function PostEditor({
                 </div>
                 {/* The real page (drafts show in dev); it reloads by itself after a save. */}
                 {previewReady ? (
-                  <iframe key={previewKey} src={`/blog/${slug}`} title="Preview" className="min-h-0 flex-1 bg-white" />
+                  <iframe key={previewKey} src={pageUrl} title="Preview" className="min-h-0 flex-1 bg-white" />
                 ) : (
                   <p className="p-6 text-sm text-muted-foreground">Preparing the preview…</p>
                 )}
@@ -386,8 +455,8 @@ export function PostEditor({
       <Sheet open={details} onOpenChange={setDetails}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>Post details</SheetTitle>
-            <SheetDescription>Saved with the post (⌘S).</SheetDescription>
+            <SheetTitle>{Noun} details</SheetTitle>
+            <SheetDescription>Saved with the {noun} (⌘S).</SheetDescription>
           </SheetHeader>
           <div className="flex flex-col gap-4 px-4 pb-6">
             <Field label="Title">
@@ -396,9 +465,58 @@ export function PostEditor({
             <Field label="Description" hint="Under the title in lists, and in link previews">
               <Textarea rows={3} value={fields.description} onChange={(e) => setFields({ ...fields, description: e.target.value })} />
             </Field>
+            {kind === 'projects' && (
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Category" hint={categories.find((c) => c.id === fields.category)?.hidden ? 'Hidden: not listed on the site' : undefined}>
+                  <Select value={fields.category ?? ''} onValueChange={(v) => setFields({ ...fields, category: v })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choose…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.label}
+                          {c.hidden && <span className="text-xs text-muted-foreground">hidden</span>}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Colour">
+                  <Select value={fields.color ?? 'green'} onValueChange={(v) => setFields({ ...fields, color: v as Accent })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(ACCENT_COLORS) as Accent[]).map((a) => (
+                        <SelectItem key={a} value={a}>
+                          <span className="size-3 rounded-full" style={{ background: ACCENT_COLORS[a] }} /> {a[0].toUpperCase() + a.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+            )}
             <Field label="Date">
               <Input type="date" value={fields.date} onChange={(e) => setFields({ ...fields, date: e.target.value })} />
             </Field>
+            {kind === 'projects' && (
+              <>
+                <div className="flex items-center gap-3">
+                  <Switch id="post-featured" checked={!!fields.featured} onCheckedChange={(v) => setFields({ ...fields, featured: v })} />
+                  <label htmlFor="post-featured" className="text-sm">
+                    Featured <span className="text-muted-foreground">(large on the homepage, first in menus)</span>
+                  </label>
+                </div>
+                <Field label="GitHub link">
+                  <Input value={fields.github ?? ''} placeholder="https://github.com/…" onChange={(e) => setFields({ ...fields, github: e.target.value })} />
+                </Field>
+                <Field label="Demo link">
+                  <Input value={fields.demo ?? ''} placeholder="https://…" onChange={(e) => setFields({ ...fields, demo: e.target.value })} />
+                </Field>
+              </>
+            )}
             <Field label="Tags" hint="Comma separated">
               <Input value={fields.tags.join(', ')} onChange={(e) => setFields({ ...fields, tags: e.target.value.split(',').map((t) => t.trimStart()) })} />
             </Field>
@@ -408,7 +526,9 @@ export function PostEditor({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="post">Post (text column, table of contents)</SelectItem>
+                  <SelectItem value="post">
+                    {kind === 'projects' ? 'Project (cover, text beside the tools)' : 'Post (text column, table of contents)'}
+                  </SelectItem>
                   <SelectItem value="story">Story (full-screen cover, wide photos)</SelectItem>
                 </SelectContent>
               </Select>
@@ -421,22 +541,53 @@ export function PostEditor({
                 </Button>
               </div>
             </Field>
-            {(fields.cover || post.images.length > 0) && (
-              <Field label="Cover image file" hint="Or an image next to the post, e.g. ./cover.jpg (used instead of a cover photo)">
-                <Select value={fields.cover || 'none'} onValueChange={(v) => setFields({ ...fields, cover: v === 'none' ? '' : v })}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {post.images.map((f) => (
-                      <SelectItem key={f} value={`./${f}`}>
-                        ./{f}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <Field label="Cover image file" hint={`Or an image next to the ${noun}, e.g. ./cover.jpg (used instead of a cover photo)`}>
+              <div className="flex gap-2">
+                <ImageFileSelect images={post.images} value={fields.cover} onChange={(cover) => setFields({ ...fields, cover })} />
+                <Button type="button" variant="outline" size="sm" onClick={() => coverInput.current?.click()} disabled={!post.file.includes('/index.')}>
+                  <Upload /> Upload
+                </Button>
+                <input
+                  ref={coverInput}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!file) return;
+                    try {
+                      const { path } = await uploadPostImage(kind, slug, file);
+                      setPost((p) => p && { ...p, images: [...p.images, path.slice(2)] });
+                      setFields((f) => f && { ...f, cover: path });
+                      toast.success(`Added ${path.slice(2)} as the cover`, { description: 'Save to keep it.' });
+                    } catch (err) {
+                      toast.error((err as Error).message);
+                    }
+                  }}
+                />
+              </div>
+            </Field>
+            {kind === 'projects' && (
+              <Field label="Small cover" hint="Optional tighter crop for cards and menus">
+                <ImageFileSelect images={post.images} value={fields.coverSmall ?? ''} onChange={(coverSmall) => setFields({ ...fields, coverSmall })} />
               </Field>
+            )}
+            {kind === 'projects' && (
+              <>
+                <CheckList
+                  label="Tools used"
+                  options={tools.map((t) => ({ id: t.id, label: t.name }))}
+                  value={fields.tools ?? []}
+                  onChange={(tools) => setFields({ ...fields, tools })}
+                />
+                <CheckList
+                  label="Related posts"
+                  options={posts.map((p) => ({ id: p.slug, label: p.title, hint: p.draft ? 'draft' : p.date }))}
+                  value={fields.posts ?? []}
+                  onChange={(posts) => setFields({ ...fields, posts })}
+                />
+              </>
             )}
             <div className="flex items-center gap-3">
               <Switch id="post-draft" checked={fields.draft} onCheckedChange={(v) => setFields({ ...fields, draft: v })} />
@@ -451,7 +602,7 @@ export function PostEditor({
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" className="text-destructive hover:text-destructive">
-                  <Trash2 /> Delete post
+                  <Trash2 /> Delete {noun}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -465,7 +616,7 @@ export function PostEditor({
                     variant="destructive"
                     onClick={async () => {
                       try {
-                        await deletePost(slug);
+                        await deletePost(kind, slug);
                         setSaved(null);
                         setDetails(false);
                         toast.success(`Deleted ${fields.title}`);
@@ -500,5 +651,59 @@ export function PostEditor({
         onPick={onPicked}
       />
     </div>
+  );
+}
+
+/** An image file next to the post or project, as "./name.jpg". */
+function ImageFileSelect({ images, value, onChange }: { images: string[]; value: string; onChange: (value: string) => void }) {
+  const files = value && !images.includes(value.slice(2)) ? [...images, value.slice(2)] : images;
+  return (
+    <Select value={value || 'none'} onValueChange={(v) => onChange(v === 'none' ? '' : v)}>
+      <SelectTrigger className="w-full min-w-0 flex-1">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">None</SelectItem>
+        {files.map((f) => (
+          <SelectItem key={f} value={`./${f}`}>
+            ./{f}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+/** Pick several (tools, related posts): a scrolling list of checkboxes. */
+function CheckList({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { id: string; label: string; hint?: string }[];
+  value: string[];
+  onChange: (value: string[]) => void;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-1.5 text-sm">
+      <legend className="mb-1.5 font-medium">
+        {label} <span className="font-normal text-muted-foreground">{value.length ? `· ${value.length}` : ''}</span>
+      </legend>
+      <div className="flex max-h-44 flex-col overflow-y-auto rounded-lg border p-1">
+        {options.length === 0 && <p className="p-2 text-xs text-muted-foreground">None yet</p>}
+        {options.map((o) => (
+          <label key={o.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted">
+            <Checkbox
+              checked={value.includes(o.id)}
+              onCheckedChange={(checked) => onChange(checked ? [...value, o.id] : value.filter((v) => v !== o.id))}
+            />
+            <span className="truncate">{o.label}</span>
+            {o.hint && <span className="ml-auto shrink-0 text-xs text-muted-foreground">{o.hint}</span>}
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }

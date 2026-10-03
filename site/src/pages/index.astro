@@ -7,11 +7,13 @@ import AboutSection from '../components/home/AboutSection.astro';
 import ProjectsSection from '../components/home/ProjectsSection.astro';
 import SkillsSection from '../components/home/SkillsSection.astro';
 import PhotographySection from '../components/home/PhotographySection.astro';
-import { isVisible } from '../lib/content';
+import { getListedProjects, isVisible } from '../lib/content';
 
 const home = (await getEntry('home', 'home'))!.data;
+// Projects in hidden categories aren't listed, here either.
+const listed = new Set((await getListedProjects()).map((p) => p.id));
 const projectGroups = await Promise.all(
-  home.projects.map(async (g) => ({ title: g.title, projects: (await getEntries(g.projects)).filter(isVisible) })),
+  home.projects.map(async (g) => ({ title: g.title, projects: (await getEntries(g.projects)).filter((p) => listed.has(p.id)) })),
 );
 const albums = (await getEntries(home.photography)).filter(isVisible);
 ---

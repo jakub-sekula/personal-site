@@ -28,22 +28,28 @@ const blog = defineCollection({
     }),
 });
 
-// The Markdown body is the project description.
+// A project is a post with a few extras (category, links, tools...): the same MDX body,
+// layouts and cover options, at /projects/<id>.
 const projects = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/projects' }),
   schema: ({ image }) =>
     z.object({
       title: z.string(),
-      excerpt: z.string().optional(),
-      type: z.enum(['Software', 'Engineering', 'Commercial']),
+      description: z.string().optional(),
+      date: z.coerce.date(),
+      category: reference('projectCategories'),
       color: accent.default('green'),
       /** Shown large on the homepage ("highlighted" in the old CMS). */
       featured: z.boolean().default(false),
       /** Position on the projects page. */
       order: z.number().default(0),
-      cover: image(),
+      cover: image().optional(),
       /** Optional tighter crop for small cards. */
       coverSmall: image().optional(),
+      /** A photo from the library as the cover, instead of an image file next to the project. */
+      coverPhoto: photoRef.optional(),
+      /** As for posts: "story" opens with the cover photo full screen. */
+      format: z.enum(['post', 'story']).default('post'),
       github: z.url().optional(),
       demo: z.url().optional(),
       tags: z.array(z.string()).default([]),
@@ -51,6 +57,16 @@ const projects = defineCollection({
       posts: z.array(reference('blog')).default([]),
       draft: z.boolean().default(false),
     }),
+});
+
+// Project categories, in the order of the filter buttons on /projects. A hidden one's
+// projects are left out of every listing (their pages still work).
+const projectCategories = defineCollection({
+  loader: file('src/content/project-categories.yaml'),
+  schema: z.object({
+    label: z.string(),
+    hidden: z.boolean().default(false),
+  }),
 });
 
 const tools = defineCollection({
@@ -213,4 +229,4 @@ const home = defineCollection({
     }),
 });
 
-export const collections = { blog, projects, tools, albums, photography, cv, home, header };
+export const collections = { blog, projects, projectCategories, tools, albums, photography, cv, home, header };

@@ -1,6 +1,6 @@
-import { ChevronDown, CloudUpload, FolderPlus, ImagePlus, Library, Plus, Search, Settings2 } from 'lucide-react';
+import { ChevronDown, CloudUpload, FolderPlus, ImagePlus, LayoutList, Library, Plus, Search, Settings2 } from 'lucide-react';
 import { type Album, type SyncStatus, plural } from '@editor/lib/api';
-import { type PostSummary } from '@editor/lib/content';
+import { type Category, type PostSummary } from '@editor/lib/content';
 import { Badge } from '@editor/components/ui/badge';
 import { Button } from '@editor/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@editor/components/ui/dropdown-menu';
@@ -22,7 +22,7 @@ import {
 } from '@editor/components/ui/sidebar';
 
 export type R2State = { status: 'checking' } | { status: 'ok'; result: SyncStatus } | { status: 'uploading' } | { status: 'error'; message: string };
-export type Section = 'photos' | 'posts' | 'cv' | 'header';
+export type Section = 'photos' | 'posts' | 'projects' | 'cv' | 'header';
 
 interface Props {
   section: Section;
@@ -41,6 +41,12 @@ interface Props {
   currentPost: string;
   onSelectPost: (slug: string) => void;
   onNewPost: () => void;
+  // Projects ('' is the categories and order page)
+  projects: PostSummary[] | null;
+  projectCategories: Category[];
+  currentProject: string;
+  onSelectProject: (slug: string) => void;
+  onNewProject: () => void;
   // CV
   cvSections: string[];
   onJumpCv: (index: number) => void;
@@ -54,7 +60,7 @@ export function AppSidebar(props: Props) {
   return (
     // Below the editor's top bar (TopBar), which switches between the sections.
     <Sidebar className="top-(--header-height) h-[calc(100svh-var(--header-height))]!">
-      {(section === 'photos' || section === 'posts') && (
+      {(section === 'photos' || section === 'posts' || section === 'projects') && (
       <SidebarHeader className="gap-3 p-3">
         {section === 'photos' && (
           <>
@@ -84,10 +90,16 @@ export function AppSidebar(props: Props) {
             <Plus /> New post
           </Button>
         )}
+        {section === 'projects' && (
+          <Button size="sm" onClick={props.onNewProject}>
+            <Plus /> New project
+          </Button>
+        )}
       </SidebarHeader>
       )}
       {section === 'photos' && <PhotosNav {...props} />}
       {section === 'posts' && <PostsNav {...props} />}
+      {section === 'projects' && <ProjectsNav {...props} />}
       {section === 'cv' && <JumpNav label="Sections" titles={props.cvSections} onJump={props.onJumpCv} />}
       {section === 'header' && <JumpNav label="Items, left to right" titles={props.headerItems} onJump={props.onJumpHeader} />}
       {section === 'photos' && (
@@ -159,6 +171,57 @@ function PhotosNav({ albums, current, onSelect }: Props) {
           </SidebarGroupContent>
         </SidebarGroup>
       )}
+    </SidebarContent>
+  );
+}
+
+/** The categories and order page, then the projects by category (in the page's order). */
+function ProjectsNav({ projects, projectCategories, currentProject, onSelectProject }: Props) {
+  const groups = [
+    ...projectCategories.map((c) => ({ id: c.id, label: c.label, hidden: c.hidden })),
+    // Any category missing from the list (shouldn't happen) still shows its projects.
+    ...[...new Set((projects ?? []).map((p) => p.category ?? ''))]
+      .filter((id) => !projectCategories.some((c) => c.id === id))
+      .map((id) => ({ id, label: id || 'No category', hidden: false })),
+  ];
+  return (
+    <SidebarContent>
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton isActive={currentProject === ''} onClick={() => onSelectProject('')}>
+                <LayoutList /> Categories and order
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+      {!projects && <p className="px-4 text-sm text-muted-foreground">Loading…</p>}
+      {groups.map((g) => {
+        const list = (projects ?? []).filter((p) => (p.category ?? '') === g.id);
+        if (!list.length) return null;
+        return (
+          <SidebarGroup key={g.id}>
+            <SidebarGroupLabel>
+              {g.label}
+              {g.hidden && <Badge variant="outline" className="ml-2 px-1 text-[10px]">hidden</Badge>}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {list.map((p) => (
+                  <SidebarMenuItem key={p.slug}>
+                    <SidebarMenuButton isActive={p.slug === currentProject} onClick={() => onSelectProject(p.slug)}>
+                      <span className="truncate">{p.title}</span>
+                      {p.draft && <Badge variant="outline" className="ml-auto px-1 text-[10px]">draft</Badge>}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        );
+      })}
     </SidebarContent>
   );
 }

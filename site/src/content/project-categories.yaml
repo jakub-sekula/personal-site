@@ -1,0 +1,8 @@
+# Project categories, in the order of the filter buttons on /projects.
+# hidden: true leaves the category's projects out of every listing (their pages still work).
+- id: software
+  label: Software
+- id: engineering
+  label: Engineering
+- id: commercial
+  label: Commercial

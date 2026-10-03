@@ -1,4 +1,11 @@
-// Client for the Posts, CV and Header dev API (../../content-api.mjs, at /dev/api/content).
+// Client for the Posts, Projects, CV and Header dev API (../../content-api.mjs, at /dev/api/content).
+
+/** Posts are "blog", projects "projects": a project is a post with a few extras. */
+export type Kind = 'blog' | 'projects';
+export const KINDS: Record<Kind, { noun: string; url: string; dir: string }> = {
+  blog: { noun: 'post', url: '/blog', dir: 'src/content/blog' },
+  projects: { noun: 'project', url: '/projects', dir: 'src/content/projects' },
+};
 
 export interface PostSummary {
   slug: string;
@@ -9,15 +16,38 @@ export interface PostSummary {
   date: string;
   tags: string[];
   cover: string;
+  /** The cover image file (the small one for projects that have it), as served in dev. */
+  coverUrl: string;
   coverPhoto: string;
   format: 'post' | 'story';
   draft: boolean;
+  // Projects only.
+  category?: string;
+  color?: Accent;
+  featured?: boolean;
+  order?: number;
+  coverSmall?: string;
+  github?: string;
+  demo?: string;
+  tools?: string[];
+  posts?: string[];
 }
 
 export interface Post extends PostSummary {
   body: string;
   /** Image files next to the post (for ./name.jpg references). */
   images: string[];
+}
+
+export interface Category {
+  id: string;
+  label: string;
+  hidden: boolean;
+}
+
+export interface Tool {
+  id: string;
+  name: string;
 }
 
 export type CvEntry =
@@ -65,6 +95,8 @@ export interface ProjectSummary {
   type: string;
   featured: boolean;
   draft: boolean;
+  /** Its category isn't hidden. */
+  listed: boolean;
   cover: string;
 }
 
@@ -93,12 +125,18 @@ const upload = async <T>(path: string, params: Record<string, string>, file: Fil
     }),
   );
 
-export const fetchPosts = async () => (await json<{ posts: PostSummary[] }>(await fetch(`${API}/posts`))).posts;
-export const fetchPost = async (slug: string) => json<Post>(await fetch(`${API}/post?${new URLSearchParams({ slug })}`));
-export const savePost = (slug: string, fields: Omit<PostSummary, 'slug' | 'file' | 'mdx'>, body: string) => post<Post>('/post', { slug, fields, body });
-export const createPost = (title: string, slug: string) => post<{ slug: string }>('/post/create', { title, slug });
-export const deletePost = (slug: string) => post('/post/delete', { slug });
-export const uploadPostImage = (slug: string, file: File) => upload<{ path: string }>('/post/image', { slug, name: file.name }, file);
+export const fetchPosts = async (kind: Kind = 'blog') => (await json<{ posts: PostSummary[] }>(await fetch(`${API}/posts?${new URLSearchParams({ kind })}`))).posts;
+export const fetchPost = async (kind: Kind, slug: string) => json<Post>(await fetch(`${API}/post?${new URLSearchParams({ kind, slug })}`));
+export const savePost = (kind: Kind, slug: string, fields: Omit<PostSummary, 'slug' | 'file' | 'mdx' | 'coverUrl'>, body: string) =>
+  post<Post>('/post', { kind, slug, fields, body });
+export const createPost = (kind: Kind, title: string, slug: string) => post<{ slug: string }>('/post/create', { kind, title, slug });
+export const deletePost = (kind: Kind, slug: string) => post('/post/delete', { kind, slug });
+export const uploadPostImage = (kind: Kind, slug: string, file: File) => upload<{ path: string }>('/post/image', { kind, slug, name: file.name }, file);
+
+export const fetchCategories = async () => (await json<{ categories: Category[] }>(await fetch(`${API}/categories`))).categories;
+export const saveCategories = async (categories: Category[]) => (await post<{ categories: Category[] }>('/categories', { categories })).categories;
+export const saveProjectOrder = async (slugs: string[]) => (await post<{ projects: PostSummary[] }>('/projects/order', { slugs })).projects;
+export const fetchTools = async () => (await json<{ tools: Tool[] }>(await fetch(`${API}/tools`))).tools;
 
 export const fetchCv = async () => json<{ cv: Cv; logos: string[] }>(await fetch(`${API}/cv`));
 export const saveCv = (cv: Cv) => post<{ cv: Cv; logos: string[] }>('/cv', { cv });

@@ -1,13 +1,24 @@
 import { useEffect, useState } from 'react';
 import { slugify } from '@editor/lib/api';
-import { createPost } from '@editor/lib/content';
+import { type Kind, KINDS, createPost } from '@editor/lib/content';
 import { Button } from '@editor/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@editor/components/ui/dialog';
 import { Input } from '@editor/components/ui/input';
 import { Field } from './shared';
 
-/** A new post starts as a draft .mdx in its own folder (so it can hold images). */
-export function NewPostDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (open: boolean) => void; onCreated: (slug: string) => Promise<void> }) {
+/** A new post or project starts as a draft .mdx in its own folder (so it can hold images). */
+export function NewPostDialog({
+  kind = 'blog',
+  open,
+  onOpenChange,
+  onCreated,
+}: {
+  kind?: Kind;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreated: (slug: string) => Promise<void>;
+}) {
+  const { noun, url, dir } = KINDS[kind];
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [edited, setEdited] = useState(false);
@@ -31,7 +42,7 @@ export function NewPostDialog({ open, onOpenChange, onCreated }: { open: boolean
             setSaving(true);
             setError('');
             try {
-              const { slug: created } = await createPost(title, slug);
+              const { slug: created } = await createPost(kind, title, slug);
               await onCreated(created);
               onOpenChange(false);
             } catch (err) {
@@ -42,8 +53,11 @@ export function NewPostDialog({ open, onOpenChange, onCreated }: { open: boolean
           }}
         >
           <DialogHeader>
-            <DialogTitle>New post</DialogTitle>
-            <DialogDescription>It starts as a draft (only visible in dev), in src/content/blog/{slug || '…'}/index.mdx.</DialogDescription>
+            <DialogTitle>New {noun}</DialogTitle>
+            <DialogDescription>
+              It starts as a draft (only visible in dev), in {dir}/{slug || '…'}/index.mdx.
+              {kind === 'projects' && ' It goes last on the projects page, in the first category: change both in its details.'}
+            </DialogDescription>
           </DialogHeader>
           <Field label="Title">
             <Input
@@ -58,7 +72,7 @@ export function NewPostDialog({ open, onOpenChange, onCreated }: { open: boolean
           </Field>
           <Field label="Address">
             <div className="flex items-center gap-1 text-sm">
-              <span className="text-muted-foreground">/blog/</span>
+              <span className="text-muted-foreground">{url}/</span>
               <Input
                 required
                 pattern="[a-z0-9\-]+"
@@ -77,7 +91,7 @@ export function NewPostDialog({ open, onOpenChange, onCreated }: { open: boolean
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? 'Creating…' : 'Create post'}
+              {saving ? 'Creating…' : `Create ${noun}`}
             </Button>
           </DialogFooter>
         </form>

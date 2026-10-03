@@ -1,7 +1,7 @@
 ---
 // Port of components/common/ProjectCard.jsx (the small card under "Other projects").
 import type { CollectionEntry } from 'astro:content';
-import { Image } from 'astro:assets';
+import ProjectImage from './ProjectImage.astro';
 
 interface Props {
   project: CollectionEntry<'projects'>;
@@ -10,7 +10,7 @@ interface Props {
 }
 
 const { project, delay = 0, class: className } = Astro.props;
-const { title, color, cover, coverSmall } = project.data;
+const { title, color } = project.data;
 const colors = {
   red: ' bg-js-red border-js-red',
   green: ' bg-js-green border-js-green',
@@ -26,9 +26,9 @@ const colors = {
   style={`animation-delay: ${delay}ms; transition-delay: ${delay}ms`}
 >
   <div class="aspect-video w-full overflow-hidden lg:aspect-5/4">
-    <Image
-      src={coverSmall ?? cover}
-      alt={title}
+    <ProjectImage
+      project={project}
+      small
       widths={[400, 750]}
       sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, 100vw"
       class="h-full w-full object-cover transition-all duration-500 ease-out group-hover:scale-105"

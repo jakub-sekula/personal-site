@@ -1,5 +1,5 @@
 // The local site editor at /dev (also /dev/photos), only while `astro dev` runs:
-// photos and albums (./api.mjs), blog posts, the CV and the header (./content-api.mjs), all
+// photos and albums (./api.mjs), posts, projects, the CV and the header (./content-api.mjs), all
 // saved into the files in the repo. Nothing of this is part of the built site.
 import {
   createCollection,
@@ -19,7 +19,23 @@ import {
   uploadPhoto,
 } from './api.mjs';
 import { publish, publishStatus } from './publish-api.mjs';
-import { createPost, deletePost, getCv, getHeader, getPost, listPosts, saveCv, saveHeader, savePost, uploadCvLogo, uploadPostImage } from './content-api.mjs';
+import {
+  createPost,
+  deletePost,
+  getCategories,
+  getCv,
+  getHeader,
+  getPost,
+  listPosts,
+  listTools,
+  saveCategories,
+  saveCv,
+  saveHeader,
+  savePost,
+  setProjectOrder,
+  uploadCvLogo,
+  uploadPostImage,
+} from './content-api.mjs';
 
 async function readJson(req) {
   let body = '';
@@ -52,10 +68,14 @@ const PHOTOS = {
   upload: { '/upload': uploadPhoto },
 };
 
+// Posts and projects share the /post routes; `kind` ("blog", the default, or "projects")
+// says which (a query parameter, or a field of the JSON body).
 const CONTENT = {
   get: {
-    '/posts': async () => ({ posts: await listPosts() }),
+    '/posts': async (params) => ({ posts: await listPosts(params) }),
     '/post': (params) => getPost(params),
+    '/categories': () => getCategories(),
+    '/tools': async () => ({ tools: await listTools() }),
     '/cv': () => getCv(),
     '/header': () => getHeader(),
     '/publish': () => publishStatus(),
@@ -64,6 +84,8 @@ const CONTENT = {
     '/post': (body) => savePost(body),
     '/post/create': (body) => createPost(body),
     '/post/delete': (body) => deletePost(body).then(ok),
+    '/categories': (body) => saveCategories(body),
+    '/projects/order': (body) => setProjectOrder(body),
     '/cv': (body) => saveCv(body),
     '/header': (body) => saveHeader(body),
   },

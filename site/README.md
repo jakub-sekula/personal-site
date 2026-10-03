@@ -22,7 +22,9 @@ pnpm check      # type-check .astro files and content schemas
 | --- | --- |
 | Homepage copy + what it features | `src/content/home.yaml` (hero, socials, about, project groups, skills, albums) |
 | Photography page + sidebar order | `src/content/photography.yaml` |
-| Projects | `src/content/projects/<slug>/index.{md,mdx}`, cover alongside |
+| Projects | `src/content/projects/<slug>/index.mdx`, cover alongside: a post with extras (category, links, tools, featured), edited in the site editor's Projects section |
+| Project categories | `src/content/project-categories.yaml`: the /projects filters, in order; `hidden: true` leaves a category's projects out of every listing (their pages still work) |
+| Site header | `src/content/header.yaml`: its items and what their menus show (the editor's Header section) |
 | Tools (skills, "tools used") | `src/content/tools.yaml`, icons in `src/assets/tools/` |
 | Blog posts | `src/content/blog/<slug>/index.{md,mdx}`, images alongside |
 | Photo albums | `src/content/albums/<slug>.mdx`: frontmatter has the description, cover and photos (or child `albums`); an optional MDX body lays out the page |
@@ -101,6 +103,12 @@ terminal (except committing):
 - Copy a photo's `<Photo>` snippet or name; click thumbnails to select several (in order) and
   copy a `<Gallery>` snippet for a post.
 - Set an album's cover, filter by album, search by name/title/tag, or show only untitled photos.
+
+The same editor (http://localhost:4321/dev, sections in its top bar) also edits **posts** and
+**projects** (the same MDX editor with a live preview; a project is a post with a category,
+links, tools and related posts; its front page renames, reorders and hides categories and
+sets the projects' order by dragging), the **CV** and the **site header**, and **publishes**
+(commit and push).
 
 It's added by `integrations/photo-editor/` only in dev: it isn't part of the build, and it only
 accepts writes from its own page. The page is a React app built with

@@ -1,12 +1,12 @@
 // The local site editor (dev only): a small CMS for photos and albums, blog
-// posts, the CV and the site header. Every change is written to the files in the repo through
+// posts, projects, the CV and the site header. Every change is written to the files in the repo through
 // the dev API (../api.mjs, ../content-api.mjs); publishing is still commit + push.
 import './editor.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Copy, X } from 'lucide-react';
 import { type Album, fetchAlbums, plural, syncNow, syncStatus } from '@editor/lib/api';
-import { type PostSummary, fetchPosts } from '@editor/lib/content';
+import { type Category, type PostSummary, fetchCategories, fetchPosts } from '@editor/lib/content';
 import { Button } from '@editor/components/ui/button';
 import { SidebarInset, SidebarProvider } from '@editor/components/ui/sidebar';
 import { Toaster } from '@editor/components/ui/sonner';
@@ -24,6 +24,7 @@ import { PhotoDialog } from './components/PhotoDialog';
 import { PhotoSettingsDialog } from './components/PhotoSettingsDialog';
 import { PublishDialog } from './components/PublishDialog';
 import { PostEditor } from './components/PostEditor';
+import { ProjectsOverview } from './components/ProjectsOverview';
 import { TopBar } from './components/TopBar';
 import { copy } from './components/shared';
 
@@ -45,14 +46,14 @@ import.meta.hot?.on('vite:error', (payload: { err?: { message?: string } }) => {
 if (location.pathname.replace(/\/$/, '') === '/dev/photos') history.replaceState(null, '', `/dev${location.hash}`);
 
 // Where you are lives in the address, so a reload comes back to it:
-// #photos/iceland, #posts/my-post, #cv, #header (and plain #iceland from before).
+// #photos/iceland, #posts/my-post, #projects(/my-project), #cv, #header (and plain #iceland from before).
 interface Route {
   section: Section;
   id: string;
 }
 function fromHash(): Route {
   const [first, ...rest] = decodeURIComponent(location.hash.slice(1)).split('/');
-  if (first === 'posts' || first === 'cv' || first === 'header' || first === 'photos') return { section: first, id: rest.join('/') };
+  if (first === 'posts' || first === 'projects' || first === 'cv' || first === 'header' || first === 'photos') return { section: first, id: rest.join('/') };
   return { section: 'photos', id: first };
 }
 const toHash = ({ section, id }: Route) => `#${section}${id ? `/${id}` : ''}`;
@@ -67,6 +68,9 @@ export default function App() {
   const [newAlbum, setNewAlbum] = useState(false);
   const [newCollection, setNewCollection] = useState(false);
   const [newPost, setNewPost] = useState(false);
+  const [newProject, setNewProject] = useState(false);
+  const [projects, setProjects] = useState<PostSummary[] | null>(null);
+  const [projectCategories, setProjectCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState(false);
   const [photoSettings, setPhotoSettings] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -92,6 +96,15 @@ export default function App() {
       toast.error((err as Error).message);
     }
   }, []);
+  const reloadProjects = useCallback(async () => {
+    try {
+      const [list, categories] = await Promise.all([fetchPosts('projects'), fetchCategories()]);
+      setProjects(list);
+      setProjectCategories(categories);
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  }, []);
   const checkR2 = useCallback(async () => {
     setR2({ status: 'checking' });
     try {
@@ -104,6 +117,7 @@ export default function App() {
   useEffect(() => {
     reload();
     reloadPosts();
+    reloadProjects();
     checkR2();
     const onHash = () => setRoute(fromHash());
     window.addEventListener('hashchange', onHash);
@@ -126,6 +140,8 @@ export default function App() {
   const album =
     route.section === 'photos' ? (albums.find((a) => a.id === route.id) ?? albums.find((a) => a.photos.length) ?? albums[0]) : undefined;
   const postSlug = route.section === 'posts' ? route.id || posts?.[0]?.slug || '' : '';
+  // No project chosen: the categories and order page.
+  const projectSlug = route.section === 'projects' ? route.id : '';
 
   return (
     <TooltipProvider>
@@ -157,6 +173,11 @@ export default function App() {
           currentPost={postSlug}
           onSelectPost={(slug) => go({ section: 'posts', id: slug })}
           onNewPost={() => setNewPost(true)}
+          projects={projects}
+          projectCategories={projectCategories}
+          currentProject={projectSlug}
+          onSelectProject={(slug) => go({ section: 'projects', id: slug })}
+          onNewProject={() => setNewProject(true)}
           cvSections={cvSections}
           onJumpCv={(index) => setCvJump({ index })}
           headerItems={headerItems}
@@ -196,6 +217,30 @@ export default function App() {
             ) : (
               <p className="p-8 text-muted-foreground">{posts ? 'No posts yet: create one.' : 'Loading…'}</p>
             ))}
+          {route.section === 'projects' &&
+            (projectSlug ? (
+              <PostEditor
+                key={`projects/${projectSlug}`}
+                kind="projects"
+                slug={projectSlug}
+                albums={albums}
+                posts={posts ?? []}
+                onDirtyChange={(d) => (dirty.current = d)}
+                onSaved={reloadProjects}
+                onDeleted={async () => {
+                  dirty.current = false;
+                  await reloadProjects();
+                  go({ section: 'projects', id: '' });
+                }}
+              />
+            ) : (
+              <ProjectsOverview
+                projects={projects}
+                onOpen={(slug) => go({ section: 'projects', id: slug })}
+                onChanged={reloadProjects}
+                onDirtyChange={(d) => (dirty.current = d)}
+              />
+            ))}
           {route.section === 'cv' && <CvEditor jumpTo={cvJump} onSections={setCvSections} onDirtyChange={(d) => (dirty.current = d)} />}
           {route.section === 'header' && (
             <HeaderEditor albums={albums} posts={posts} jumpTo={headerJump} onItems={setHeaderItems} onDirtyChange={(d) => (dirty.current = d)} />
@@ -232,6 +277,15 @@ export default function App() {
         onCreated={async (slug) => {
           await reloadPosts();
           go({ section: 'posts', id: slug });
+        }}
+      />
+      <NewPostDialog
+        kind="projects"
+        open={newProject}
+        onOpenChange={setNewProject}
+        onCreated={async (slug) => {
+          await reloadProjects();
+          go({ section: 'projects', id: slug });
         }}
       />
       <CommandMenu

@@ -3,8 +3,8 @@
 // alternating, the rest as small cards under "Other projects".
 import type { CollectionEntry } from 'astro:content';
 import { getEntries } from 'astro:content';
-import { Image } from 'astro:assets';
 import SectionContainer from './SectionContainer.astro';
+import ProjectImage from '../common/ProjectImage.astro';
 import Hyperlink from '../common/Hyperlink.astro';
 import Tag from '../common/Tag.astro';
 import ProjectCard from '../common/ProjectCard.astro';
@@ -42,9 +42,8 @@ const others = projects.filter((p) => !p.data.featured);
           >
             <div class=" absolute z-0 h-0 w-full" />
             <a href={`/projects/${project.id}`}>
-              <Image
-                src={project.data.cover}
-                alt={project.data.title}
+              <ProjectImage
+                project={project}
                 widths={[750, 1000, 1500]}
                 sizes="(min-width: 1280px) 700px, (min-width: 768px) 60vw, 100vw"
                 class="z-50 h-full w-full rounded-md object-cover transition-all duration-500 ease-out group-hover:scale-105"
@@ -69,7 +68,7 @@ const others = projects.filter((p) => !p.data.featured);
                 ))}
               </ul>
             )}
-            {project.data.excerpt && <p class="font-light leading-normal md:leading-snug">{project.data.excerpt}</p>}
+            {project.data.description && <p class="font-light leading-normal md:leading-snug">{project.data.description}</p>}
             {tools.length > 0 && (
               <div class="flex gap-2">
                 {tools.map((tool) => {
