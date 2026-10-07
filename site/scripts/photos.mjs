@@ -10,6 +10,12 @@
 //     Create any files that newer versions of the pipeline add (e.g. og.jpg link
 //     previews) for photos processed before, from their existing variants.
 //
+//   pnpm photos share [<album>...] [--force]
+//     Draw the link-preview pictures (og:image) of the photography pages that are
+//     missing or out of date (all of them with --force), into public/photos/_share/
+//     and src/data/share-images.json (see scripts/lib/share.mjs). The editor and
+//     Publish do this by themselves.
+//
 //   pnpm photos sync [--dry-run]
 //     Upload anything in public/photos/ that isn't in the R2 bucket yet, or that
 //     differs from the copy there (e.g. after its metadata was updated).
@@ -19,6 +25,7 @@ import { readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { syncPhotos } from './lib/sync.mjs';
+import { updateShareImages } from './lib/share.mjs';
 import {
   IMAGE_EXT,
   listInParent,
@@ -40,6 +47,7 @@ const { positionals, values } = parseArgs({
     title: { type: 'string' },
     parent: { type: 'string' },
     'dry-run': { type: 'boolean', default: false },
+    force: { type: 'boolean', default: false },
   },
 });
 
@@ -48,8 +56,9 @@ const [command, ...rest] = positionals;
 if (command === 'add') await add(rest);
 else if (command === 'backfill') await backfill();
 else if (command === 'sync') await sync();
+else if (command === 'share') await share(rest);
 else {
-  console.error('Usage: pnpm photos add <album> <folder-or-files...> [--title ...] [--parent ...]\n       pnpm photos backfill\n       pnpm photos sync [--dry-run]');
+  console.error('Usage: pnpm photos add <album> <folder-or-files...> [--title ...] [--parent ...]\n       pnpm photos backfill\n       pnpm photos share [<album>...] [--force]\n       pnpm photos sync [--dry-run]');
   process.exit(1);
 }
 
@@ -106,6 +115,17 @@ async function backfill() {
     }
   }
   console.log(`Created ${made} file(s). Run \`pnpm photos sync\` to upload them.`);
+}
+
+async function share(albums) {
+  const { drawn, removed } = await updateShareImages({
+    only: albums.length ? albums : undefined,
+    force: values.force,
+    onProgress: (n, total, page) => process.stdout.write(`\r  ${n}/${total} ${page}`.padEnd(40)),
+  });
+  process.stdout.write('\n');
+  console.log(`Drew ${drawn.length} link-preview picture(s)${drawn.length ? `: ${drawn.join(', ')}` : ''}; removed ${removed.length} old one(s).`);
+  if (drawn.length) console.log('Upload them with `pnpm photos sync` (Publish does it too).');
 }
 
 async function sync() {

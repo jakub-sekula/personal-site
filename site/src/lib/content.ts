@@ -72,8 +72,11 @@ export async function getChildAlbums(album: Album) {
   return (await getEntries(album.data.albums)).filter(isVisible);
 }
 
-/** Album title without a leading flag emoji ("🇮🇸 Iceland" → "Iceland"), for page titles. */
-export const albumName = (album: Album) => album.data.title.replace(/^\p{Regional_Indicator}{2}\s*/u, '');
+/**
+ * Album title without its leading flag ("🇮🇸 Iceland" → "Iceland"), for page titles. Covers
+ * country flags (two regional letters) and the England/Scotland/Wales ones (🏴 + tags).
+ */
+export const albumName = (album: Album) => album.data.title.replace(/^[\p{Extended_Pictographic}\p{Regional_Indicator}\u{E0020}-\u{E007F}\u{FE0F}\u{200D}\s]+/u, '');
 
 // --- Photos ------------------------------------------------------------------
 // A photo's files come from its manifest (src/lib/photos.ts); its title,

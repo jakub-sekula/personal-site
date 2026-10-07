@@ -7,6 +7,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { ROOT } from '../../scripts/lib/photos.mjs';
 import { syncPhotos } from '../../scripts/lib/sync.mjs';
+import { updateShareImages } from '../../scripts/lib/share.mjs';
 
 const exec = promisify(execFile);
 
@@ -88,6 +89,19 @@ export async function publish({ message, targets }, emit = () => {}) {
     steps.push(text);
     emit({ done: text });
   };
+  // 0. Link-preview pictures of albums changed by hand (the editor draws its own as it
+  // goes). First, so their list (src/data/share-images.json) goes out with the rest.
+  emit({ step: 'Drawing link-preview pictures' });
+  try {
+    const { drawn } = await updateShareImages({
+      onProgress: (n, total) => emit({ step: 'Drawing link-preview pictures', detail: `${n} of ${total}`, progress: n / total }),
+    });
+    done(drawn.length ? `Drew ${drawn.length} link-preview picture${drawn.length === 1 ? '' : 's'}` : 'Link-preview pictures up to date');
+  } catch (error) {
+    // Not worth stopping for: pages without an up-to-date picture use their cover.
+    done(`Couldn't draw link-preview pictures (${error.message}); those pages use their cover`);
+  }
+
   emit({ step: 'Checking what changed' });
   const status = await publishStatus();
   const wanted = (targets ?? [status.live]).filter((t) => status.targets.includes(t));

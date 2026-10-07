@@ -12,6 +12,8 @@ import PhotoGrid from '../../components/photos/PhotoGrid.astro';
 import { mdxComponents } from '../../components/mdx';
 import { albumCover, albumName, albumPhotos, getAlbums, getChildAlbums, getParentAlbum, withCovers } from '../../lib/content';
 import { getPhoto } from '../../lib/photos';
+import { author, jsonLd, listOf, seoTrim } from '../../lib/seo';
+import { shareImage } from '../../lib/share';
 
 export const getStaticPaths = (async () => {
   const albums = await getAlbums();
@@ -32,13 +34,47 @@ const cover = getPhoto(coverSrc);
 const parent = await getParentAlbum(album);
 const back = parent ? { href: `/photography/${parent.id}`, label: `Back to ${parent.data.title}` } : { href: '/photography', label: 'Back to albums' };
 const photos = albumPhotos(album);
+
+// Search results and link previews: "Iceland — Jakub Sekula Photography", the album's
+// description (or one made from what's in it), and its share picture (src/lib/share.ts).
+const name = albumName(album);
+const count = (n: number, what: string) => `${n} ${what}${n === 1 ? '' : 's'}`;
+const childNames = children.map((c) => albumName(c.album));
+const metaDescription = seoTrim(
+  description ||
+    (children.length
+      ? `Photos from ${listOf(childNames.length > 4 ? [...childNames.slice(0, 4), 'more'] : childNames)}, by Jakub Sekula.`
+      : parent
+        ? `${count(photos.length, 'photo')} from ${name}, by Jakub Sekula.`
+        : `${name}: ${count(photos.length, 'photo')} by Jakub Sekula.`),
+);
+const share = shareImage(album.id, { title, cover: coverSrc, position: album.data.coverPosition });
+const preview = share ?? cover.og;
+const previewAlt = `${name}: ${children.length ? 'photo albums' : 'photos'} by Jakub Sekula`;
+const absolute = (href: string) => new URL(href, Astro.site).href;
+const structured = jsonLd({
+  '@type': 'ImageGallery',
+  name,
+  description: metaDescription,
+  url: absolute(`/photography/${album.id}`),
+  image: absolute(preview.url),
+  author,
+  ...(children.length
+    ? { hasPart: children.map((c) => ({ '@type': 'ImageGallery', name: albumName(c.album), url: absolute(`/photography/${c.album.id}`) })) }
+    : { numberOfItems: photos.length }),
+  ...(parent && { isPartOf: { '@type': 'ImageGallery', name: albumName(parent), url: absolute(`/photography/${parent.id}`) } }),
+});
 ---
 
-<Photography title={`${albumName(album)} - Jakub Sekula`} description={description || title}
-  image={cover.og.url}
-  imageWidth={cover.og.width}
-  imageHeight={cover.og.height}
+<Photography
+  title={`${name} — Jakub Sekula Photography`}
+  description={metaDescription}
+  image={preview.url}
+  imageWidth={preview.width}
+  imageHeight={preview.height}
+  imageAlt={previewAlt}
 >
+  <script slot="head" type="application/ld+json" set:html={structured} />
   {
     fullHero ? (
       // The cover photo full screen, edge to edge, above the sidebar (`hero: banner` for the old banner).

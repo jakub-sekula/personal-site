@@ -241,9 +241,13 @@ export const removePhoto = ({ album: albumId, src }) =>
  * it doesn't exist yet (titled `title`, cover = this photo). Same pipeline as
  * `pnpm photos add`.
  */
-export async function uploadPhoto(req, { album: albumArg, name, title }) {
+export async function uploadPhoto(req, { album: albumArg, name, title, cover }) {
   const albumId = slugify(albumArg ?? '');
   if (!albumId) throw new Error('Pick an album');
+  // `cover=1`: an image just for the album's cover: processed like any photo (sizes,
+  // credit, R2), but not added to the album's photos.
+  const coverOnly = cover === '1';
+  if (coverOnly && !(await readAlbum(albumId))) throw new Error(`No album "${albumId}"`);
   if (!name || !IMAGE_EXT.test(name)) throw new Error(`${name || 'File'}: not a supported image (JPEG, PNG, WebP, TIFF, AVIF, HEIC)`);
   if (Number(req.headers['content-length']) > MAX_UPLOAD) throw new Error(`${name}: larger than 300 MB`);
 
@@ -267,7 +271,8 @@ export async function uploadPhoto(req, { album: albumArg, name, title }) {
         doc: newAlbumDoc({ title: title?.trim() || albumArg, cover: src, date: new Date().toISOString().slice(0, 10), photos: [] }),
         body: '',
       };
-      const added = appendPhotos(albumFile.doc, [src]) > 0;
+      const added = !coverOnly && appendPhotos(albumFile.doc, [src]) > 0;
+      if (coverOnly) albumFile.doc.set('cover', src);
       await writeAlbum(albumId, albumFile);
       return { album: albumId, created: !existing, src, added, upgraded };
     });
@@ -310,15 +315,18 @@ export const updateAlbum = ({ album: albumId, fields }) =>
         doc.set(key, value);
       }
     }
-    await writeAlbum(albumId, album);
-
-    // A collection's cover is optional (its first album's cover otherwise).
-    if (doc.has('albums') && 'cover' in fields) {
+    // The cover: any photo in the library ("album/photo", e.g. one uploaded just for the
+    // cover), or none: the album's first photo (a collection's first album's cover).
+    if ('cover' in fields) {
       const cover = String(fields.cover ?? '').trim();
-      if (cover) doc.set('cover', cover);
-      else doc.delete('cover');
-      await writeAlbum(albumId, album);
+      if (!cover) doc.delete('cover');
+      else if (cover !== doc.get('cover')) {
+        const [coverAlbum, ref] = cover.split('/');
+        if (!SLUG.test(coverAlbum ?? '') || !ref || !resolveId(await readManifest(coverAlbum), ref)) throw new Error(`No photo "${cover}" for the cover`);
+        doc.set('cover', cover);
+      }
     }
+    await writeAlbum(albumId, album);
 
     const parent = String(fields.parent ?? '');
     if (parent) {

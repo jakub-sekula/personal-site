@@ -28,6 +28,7 @@ const hasCover = Astro.slots.has('cover');
 ---
 
 <Base {...Astro.props}>
+  <slot name="head" slot="head" />
   {/* A full-screen cover (slot="cover") goes above the sidebar, with the header over it. */}
   <SiteHeader overHero={hasCover} />
   <slot name="cover" />

@@ -3,13 +3,39 @@
 import { getEntry, getEntries } from 'astro:content';
 import Photography from '../../layouts/Photography.astro';
 import Picture from '../../components/photos/Picture.astro';
-import { isVisible, withCovers } from '../../lib/content';
+import { albumName, isVisible, withCovers } from '../../lib/content';
+import { getPhoto } from '../../lib/photos';
+import { author, jsonLd } from '../../lib/seo';
+import { SHARE_INDEX, shareImage } from '../../lib/share';
 
 const config = (await getEntry('photography', 'photography'))!.data;
 const albums = await withCovers((await getEntries(config.index)).filter(isVisible));
+
+// Link previews: the first album's cover with "Photography" on it (src/lib/share.ts).
+const first = albums[0];
+const preview = first && (shareImage(SHARE_INDEX, { title: 'Photography', cover: first.cover, position: first.album.data.coverPosition }) ?? getPhoto(first.cover).og);
+const description = 'Photography by Jakub Sekula: travel and street photos from around the world, portraits, black and white, and film.';
+const structured = jsonLd({
+  '@type': 'CollectionPage',
+  name: 'Photography',
+  description,
+  url: new URL('/photography', Astro.site).href,
+  ...(preview && { image: new URL(preview.url, Astro.site).href }),
+  author,
+  hasPart: albums.map(({ album }) => ({ '@type': 'ImageGallery', name: albumName(album), url: new URL(`/photography/${album.id}`, Astro.site).href })),
+});
 ---
 
-<Photography title="Photography home - Jakub Sekula Photography" description="Photography homepage">
+<Photography
+  title="Photography — Jakub Sekula"
+  description={description}
+  image={preview?.url}
+  imageWidth={preview?.width}
+  imageHeight={preview?.height}
+  imageAlt="Photography by Jakub Sekula"
+>
+  <script slot="head" type="application/ld+json" set:html={structured} />
+  <h1 class="sr-only">Photography</h1>
   <div class="col-span-full mx-auto grid w-full grid-cols-6 gap-4 md:gap-0">
     {
       albums.map(({ album, cover }) => (

@@ -30,6 +30,8 @@ const manifests = import.meta.glob<Record<string, PhotoMeta>>('../data/photos/*.
 
 // Local dev/preview serves public/photos; production points at the R2 bucket.
 const BASE = (import.meta.env.PUBLIC_PHOTOS_URL ?? '/photos').replace(/\/$/, '');
+/** Where the photo files are served from (R2 in production, public/photos in dev). */
+export const PHOTOS_BASE = BASE;
 
 // Must match OG_WIDTH in scripts/lib/photos.mjs.
 const OG_WIDTH = 1200;

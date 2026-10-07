@@ -10,11 +10,14 @@ interface Props {
   image?: string;
   imageWidth?: number;
   imageHeight?: number;
+  /** What the link-preview image shows (og:image:alt). */
+  imageAlt?: string;
   /** Ask search engines not to index this page. (Every page asks AI crawlers not to use it.) */
   noindex?: boolean;
 }
 
-const { title = 'Jakub Sekula', description = 'Web developer, mechanical engineer, and photography enthusiast.', image, imageWidth, imageHeight, noindex = false } = Astro.props;
+const { title = 'Jakub Sekula', description = 'Web developer, mechanical engineer, and photography enthusiast.', image, imageWidth, imageHeight, imageAlt, noindex = false } = Astro.props;
+const imageUrl = image && new URL(image, Astro.site);
 const canonical = new URL(pagePath(Astro.url), Astro.site);
 ---
 
@@ -38,10 +41,18 @@ const canonical = new URL(pagePath(Astro.url), Astro.site);
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:type" content="website" />
-    {image && <meta property="og:image" content={new URL(image, Astro.site)} />}
-    {image && imageWidth && <meta property="og:image:width" content={String(imageWidth)} />}
-    {image && imageHeight && <meta property="og:image:height" content={String(imageHeight)} />}
-    <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
+    <meta property="og:site_name" content="Jakub Sekula" />
+    <meta property="og:locale" content="en_GB" />
+    {imageUrl && <meta property="og:image" content={imageUrl} />}
+    {imageUrl && <meta property="og:image:type" content={imageUrl.pathname.endsWith('.png') ? 'image/png' : imageUrl.pathname.endsWith('.webp') ? 'image/webp' : 'image/jpeg'} />}
+    {imageUrl && imageWidth && <meta property="og:image:width" content={String(imageWidth)} />}
+    {imageUrl && imageHeight && <meta property="og:image:height" content={String(imageHeight)} />}
+    {imageUrl && imageAlt && <meta property="og:image:alt" content={imageAlt} />}
+    <meta name="twitter:card" content={imageUrl ? 'summary_large_image' : 'summary'} />
+    {imageUrl && <meta name="twitter:image" content={imageUrl} />}
+    {imageUrl && imageAlt && <meta name="twitter:image:alt" content={imageAlt} />}
+    {/* Structured data and other per-page tags. */}
+    <slot name="head" />
     <script is:inline>
       // Same behaviour as next-themes on the old site: dark by default, choice kept in localStorage("theme").
       (() => {

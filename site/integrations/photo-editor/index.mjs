@@ -19,6 +19,7 @@ import {
   uploadPhoto,
 } from './api.mjs';
 import { publish, publishStatus } from './publish-api.mjs';
+import { updateShareImages } from '../../scripts/lib/share.mjs';
 import {
   createPost,
   deletePost,
@@ -45,8 +46,28 @@ async function readJson(req) {
 
 const ok = () => ({ saved: true });
 
-/** GET handlers, POST JSON handlers and POST upload (raw body) handlers, by path. */
+// Album changes (title, cover, crop, photos) redraw the link-preview pictures they
+// affect (scripts/lib/share.mjs), in the background, a moment after the last change.
+let shareTimer;
+let sharing = Promise.resolve();
+function refreshShareImages() {
+  clearTimeout(shareTimer);
+  shareTimer = setTimeout(() => {
+    sharing = sharing
+      .then(() => updateShareImages())
+      .then(
+        ({ drawn }) => drawn.length && console.log(`[editor] Drew link-preview pictures: ${drawn.join(', ')}`),
+        (error) => console.error(`[editor] Link-preview pictures: ${error.message}`),
+      );
+  }, 1500);
+}
+
+/**
+ * GET handlers, POST JSON handlers and POST upload (raw body) handlers, by path;
+ * `afterWrite` runs after every successful POST.
+ */
 const PHOTOS = {
+  afterWrite: refreshShareImages,
   get: {
     '/': async () => ({ albums: await listAlbums() }),
     '/sync': () => syncStatus(),
@@ -131,10 +152,16 @@ function handler(routes) {
         return res.end();
       }
       const upload = routes.upload[url.pathname];
-      if (upload) return send(200, await upload(req, params));
+      if (upload) {
+        const result = await upload(req, params);
+        routes.afterWrite?.();
+        return send(200, result);
+      }
       const action = routes.post[url.pathname];
       if (!action || !json) return send(404, { error: 'Unknown action' });
-      return send(200, await action(await readJson(req)));
+      const result = await action(await readJson(req));
+      routes.afterWrite?.();
+      return send(200, result);
     } catch (error) {
       return send(400, { error: error.message });
     }

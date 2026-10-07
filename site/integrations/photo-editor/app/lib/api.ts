@@ -104,6 +104,18 @@ export async function uploadPhoto(album: string, file: File, title?: string) {
   );
 }
 
+/** Upload an image just for an album's cover (not added to its photos) and make it the cover. */
+export async function uploadCover(album: string, file: File) {
+  const params = new URLSearchParams({ album, name: file.name, cover: '1' });
+  return json<{ src: string }>(
+    await fetch(`${API}/upload?${params}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream', 'X-Photo-Editor': '1' },
+      body: file,
+    }),
+  );
+}
+
 /**
  * Upload files into an album a few at a time, then put the new photos in
  * file-name order after the existing ones (`before`).

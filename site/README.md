@@ -57,9 +57,19 @@ pnpm photos add portugal ~/Exports/portugal --title "🇵🇹 Portugal" --parent
 # Edit src/content/albums/portugal.mdx: reorder, add titles/descriptions/tags, pick the cover, add a description.
 # Without --parent, add it to src/content/photography.yaml to list it on /photography.
 
+pnpm photos share  # draw the album's link-preview picture
 pnpm photos sync   # upload new variants to R2
 git add src && git commit -m "Add Portugal album" && git push   # the Worker rebuilds and deploys
 ```
+
+**Link previews:** every album, collection and /photography has a 1200×630 share picture
+(og:image): its cover, the logo at the top, its name at the bottom; under 300 KB, with the
+important part in the middle square that WhatsApp and Signal crop to. They're drawn locally
+into `public/photos/_share/` (uploaded to R2 like the photos) and listed in
+`src/data/share-images.json`; the editor redraws them when an album changes, Publish redraws
+anything out of date, and `pnpm photos share` does it by hand (`--force` after a design
+change, or raise `SHARE_VERSION` in `scripts/lib/share-key.mjs`). A page whose picture no
+longer matches its name, cover or crop uses its cover's plain `og.jpg` until it's redrawn.
 
 Photo ids include a content hash, so a re-edited export gets new file URLs (safe to cache
 forever). Refer to a photo by its short name (`greece/img-7785`) unless two in an album share one.
